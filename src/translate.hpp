@@ -83,7 +83,7 @@ public:
 using input_buffer = buffer<IP_MAXPACKET>;
 
 template <typename Target>
-void
+bool
 translate(std::reference_wrapper<tuntap>, std::reference_wrapper<input_buffer>);
 
 } // namespace shinano

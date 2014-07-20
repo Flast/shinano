@@ -5,6 +5,7 @@
 
 #include <iostream>
 
+#include "config.hpp"
 #include "util.hpp"
 #include "translate.hpp"
 
@@ -19,17 +20,28 @@ using wrap = std::reference_wrapper<T>;
 
 // v4 to v6
 template <>
-void
+bool
 translate<ipv6>(wrap<tuntap> fwd, wrap<input_buffer> b)
 {
     auto iphdr = b.get().internet_header<ipv4>();
 
     BOOST_ASSERT(iphdr->ip_v == 4);
 
-    std::cout << "[IPv4] "
-      << to_string(source(*iphdr)) << " -> " << to_string(dest(*iphdr))
-      << " / " << b.get().size() << " bytes"
-      << std::endl;
+    switch (payload_protocol(*iphdr))
+    {
+      case iana::protocol_number::icmp:
+        std::cout << "[icmp] "
+          << to_string(source(*iphdr)) << " -> " << to_string(dest(*iphdr))
+          << " / " << b.get().size() << " bytes"
+          << std::endl;
+        break;
+
+      default:
+        // drop unsupported packet
+        return false;
+    }
+
+    return true;
 }
 
 } // namespace shinano

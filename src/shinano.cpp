@@ -36,21 +36,18 @@ do_work(tuntap io)
         {
           case ieee::protocol_number::ip:
             // v4 to v6
-            translate<ipv6>(io, buffer);
+            if (translate<ipv6>(io, buffer)) { continue; }
             break;
 
           case ieee::protocol_number::ipv6:
             // v6 to v4
-            translate<ipv4>(io, buffer);
-            break;
-
-          default:
-            std::cout
-              << "warning: unknown internet layer protocol"
-              << " (in " << buffer.size() << " bytes)"
-              << std::endl;
+            if (translate<ipv4>(io, buffer)) { continue; }
             break;
         }
+        std::cout
+          << "warning: unknown internet layer protocol"
+          << " (in " << buffer.size() << " bytes)"
+          << std::endl;
     }
 }
 
