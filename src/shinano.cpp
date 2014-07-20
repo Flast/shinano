@@ -10,6 +10,7 @@
 #include <functional>
 
 #include "detail/exception.hpp"
+#include "detail/dump.hpp"
 
 #include "config.hpp"
 #include "socket.hpp"
@@ -41,6 +42,7 @@ do_work(tuntap io)
           << "warning: unknown internet layer protocol"
           << " (in " << buffer.size() << " bytes)"
           << std::endl;
+        debug::dump(std::cout, buffer);
     }
 }
 

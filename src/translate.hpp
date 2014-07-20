@@ -7,8 +7,9 @@
 #define shinano_translate_hpp_
 
 #include <cstdint>
-#include <array>
 #include <functional>
+#include <iterator>
+#include <array>
 
 #include "config.hpp"
 #include "socket.hpp"
@@ -61,6 +62,34 @@ private:
     }
 
 public:
+    auto
+    begin() noexcept
+      -> decltype(this->internal_buffer.begin())
+    { return internal_buffer.begin(); }
+
+    auto
+    begin() const noexcept
+      -> decltype(this->internal_buffer.begin())
+    { return internal_buffer.begin(); }
+
+    auto
+    end() noexcept
+      -> decltype(this->internal_buffer.begin())
+    {
+        auto i = internal_buffer.begin();
+        std::advance(i, size());
+        return i;
+    }
+
+    auto
+    end() const noexcept
+      -> decltype(this->internal_buffer.begin())
+    {
+        auto i = internal_buffer.begin();
+        std::advance(i, size());
+        return i;
+    }
+
     std::uint16_t
     flags() const noexcept { return *data_as<std::uint16_t>(); }
 
