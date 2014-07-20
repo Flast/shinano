@@ -16,13 +16,6 @@
 #include "translate.hpp"
 using namespace shinano;
 
-template <typename CharT, typename... T>
-inline std::basic_ostream<CharT, T...> &
-hex4(std::basic_ostream<CharT, T...> &ostr)
-{
-    return ostr << std::hex << std::setw(4) << std::setfill(static_cast<CharT>('0'));
-}
-
 void
 do_work(tuntap io)
 {
