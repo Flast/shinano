@@ -1,0 +1,37 @@
+# libtool
+/ltmain.sh
+/m4/
+
+# aclocal
+/aclocal.m4
+/autom4te.cache/
+
+# autoheader
+/config.h.in
+/config.h.in~
+
+# automake
+Makefile.in
+/config.guess
+/config.sub
+/depcomp
+/install-sh
+/missing
+
+# autoconf
+/configure
+
+# configure
+Makefile
+/config.h
+/config.log
+/config.status
+/libtool
+.deps/
+/stamp-h1
+
+# make
+*.o
+src/shinano
+
+*.swp
