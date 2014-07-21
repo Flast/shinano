@@ -42,6 +42,11 @@ template <typename T>
 inline constexpr T
 host_to_net(T v) noexcept { return reorder(v); }
 
+// XXX: Take care of endian by Boost.Predef
+template <typename T>
+inline constexpr T
+net_to_host(T v) noexcept { return reorder(v); }
+
 
 // Internet Layer -- IPv4
 struct ipv4 { // pseudo-namespace
