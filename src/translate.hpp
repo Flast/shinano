@@ -8,6 +8,8 @@
 
 #include <cstdint>
 #include <functional>
+#include <stdexcept>
+
 #include <iterator>
 #include <array>
 
@@ -110,6 +112,12 @@ public:
 };
 
 using input_buffer = buffer<IP_MAXPACKET>;
+
+
+struct translate_error : std::runtime_error
+{
+    using std::runtime_error::runtime_error;
+};
 
 template <typename Target>
 bool

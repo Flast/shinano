@@ -21,7 +21,7 @@ namespace shinano {
 // v6 to v4
 template <>
 bool
-translate<ipv4>(wrap<tuntap> fwd, wrap<input_buffer> b)
+translate<ipv4>(wrap<tuntap> fwd, wrap<input_buffer> b) try
 {
     auto iphdr = b.get().internet_header<ipv6>();
 
@@ -41,6 +41,11 @@ translate<ipv4>(wrap<tuntap> fwd, wrap<input_buffer> b)
         return false;
     }
 
+    return true;
+}
+catch (translate_error &e)
+{
+    std::cerr << e.what() << std::endl;
     return true;
 }
 

@@ -7,10 +7,6 @@
 #include <execinfo.h>
 
 #include <system_error>
-#include <boost/throw_exception.hpp>
-#include <boost/exception/info.hpp>
-#include <boost/exception/get_error_info.hpp>
-#include <boost/exception/enable_error_info.hpp>
 #include "detail/exception.hpp"
 
 #include <vector>
@@ -41,22 +37,24 @@ to_string(const throw_backtrace &bt)
     return ostr.str();
 }
 
+bool
+backtrace(throw_backtrace::value_type &bt) noexcept
+{
+    if (const int d = ::backtrace(bt.data(), bt.size()))
+    {
+        bt.resize(d);
+        return true;
+    }
+    return false;
+}
+
 } // namespace shinano::detail
 
 void
 throw_with_errno()
 {
     auto ex = std::system_error(errno, std::system_category());
-    auto ei = boost::enable_error_info(ex);
-
-    std::vector<void *> bt(detail::max_backtrace_count);
-    if (const int d = backtrace(bt.data(), detail::max_backtrace_count))
-    {
-        bt.resize(d);
-        ei << detail::throw_backtrace(std::move(bt));
-    }
-
-    BOOST_THROW_EXCEPTION(ei);
+    detail::throw_exception(ex);
 }
 
 } // namespace shinano

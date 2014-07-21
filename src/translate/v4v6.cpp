@@ -21,7 +21,7 @@ using wrap = std::reference_wrapper<T>;
 // v4 to v6
 template <>
 bool
-translate<ipv6>(wrap<tuntap> fwd, wrap<input_buffer> b)
+translate<ipv6>(wrap<tuntap> fwd, wrap<input_buffer> b) try
 {
     auto iphdr = b.get().internet_header<ipv4>();
 
@@ -41,6 +41,11 @@ translate<ipv6>(wrap<tuntap> fwd, wrap<input_buffer> b)
         return false;
     }
 
+    return true;
+}
+catch (translate_error &e)
+{
+    std::cerr << e.what() << std::endl;
     return true;
 }
 

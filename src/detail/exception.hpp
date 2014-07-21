@@ -9,7 +9,10 @@
 #include <string>
 #include <vector>
 
+#include <boost/throw_exception.hpp>
 #include <boost/exception/exception.hpp>
+#include <boost/exception/info.hpp>
+#include <boost/exception/enable_error_info.hpp>
 
 #include "config.hpp"
 
@@ -19,6 +22,25 @@ typedef boost::error_info<struct throw_backtrace_, std::vector<void *>> throw_ba
 
 std::string
 to_string(const throw_backtrace &);
+
+// Thin function should not throw any exception to avoid double throw.
+bool
+backtrace(throw_backtrace::value_type &) noexcept;
+
+template <typename E>
+inline void
+throw_exception(E &&ex)
+{
+    auto ei = boost::enable_error_info(ex);
+
+    throw_backtrace::value_type bt(config::max_backtrace_count);
+    if (detail::backtrace(bt))
+    {
+        ei << detail::throw_backtrace(std::move(bt));
+    }
+
+    BOOST_THROW_EXCEPTION(ei);
+}
 
 } // namespace shinano::detail
 
