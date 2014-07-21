@@ -8,12 +8,21 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <chrono>
 #include <boost/predef/other/endian.h>
 
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 
 namespace shinano {
+
+namespace config {
+
+constexpr int max_backtrace_count = 20;
+
+constexpr std::chrono::seconds table_expires_after {1800};
+
+} // namespace shinano::config
 
 inline constexpr std::uint8_t
 reorder(std::uint8_t v) noexcept { return v; }

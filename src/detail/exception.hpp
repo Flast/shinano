@@ -7,13 +7,14 @@
 #define sln64_detail_exception_hpp_
 
 #include <string>
+#include <vector>
+
 #include <boost/exception/exception.hpp>
 
-#include <vector>
+#include "config.hpp"
 
 namespace shinano { namespace detail {
 
-constexpr int max_backtrace_count = 20;
 typedef boost::error_info<struct throw_backtrace_, std::vector<void *>> throw_backtrace;
 
 std::string
