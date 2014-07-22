@@ -4,12 +4,9 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <iostream>
-#include <iomanip>
 #include <boost/exception/diagnostic_information.hpp>
-
-#include <functional>
-
 #include "detail/exception.hpp"
+
 #include "detail/dump.hpp"
 
 #include "config.hpp"
@@ -48,6 +45,8 @@ do_work(tuntap io)
 
 int main(int argc, char **argv) try
 {
+    temporary_table_init();
+
     auto io = make_tuntap<tuntap::tun_tag>(argv[1]);
     io.up();
 

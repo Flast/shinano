@@ -123,6 +123,9 @@ template <typename Target>
 bool
 translate(std::reference_wrapper<tuntap>, std::reference_wrapper<input_buffer>);
 
+void
+temporary_table_init();
+
 } // namespace shinano
 
 #endif

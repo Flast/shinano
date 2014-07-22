@@ -7,7 +7,9 @@
 
 #include "config.hpp"
 #include "util.hpp"
+
 #include "translate.hpp"
+#include "translate/address_table.hpp"
 
 namespace {
 
@@ -33,6 +35,9 @@ translate<ipv4>(wrap<tuntap> fwd, wrap<input_buffer> b) try
         std::cout << "[icmp6] "
           << to_string(source(*iphdr)) << " -> " << to_string(dest(*iphdr))
           << " / " << b.get().size() << " bytes"
+          << std::endl
+          << "    translate to [icmp] "
+          << to_string(lookup(source(*iphdr))) << " -> " << "<<unspecified>>"
           << std::endl;
         break;
 
