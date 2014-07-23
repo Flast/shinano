@@ -11,14 +11,28 @@
 #include "translate.hpp"
 #include "translate/address_table.hpp"
 
+namespace shinano {
+
 namespace {
 
 template <typename T>
 using wrap = std::reference_wrapper<T>;
 
-} // <anonymous-namespace>
+void
+icmp6(const ipv6::header &iphdr, const in_addr &mapped)
+{
+    const auto payload_length = net_to_host(iphdr.ip6_plen);
 
-namespace shinano {
+    std::cout << "[icmp6] "
+      << to_string(source(iphdr)) << " -> " << to_string(dest(iphdr))
+      << " / " << payload_length << " bytes"
+      << std::endl
+      << "    translate to [icmp] "
+      << to_string(mapped) << " -> " << "<<unspecified>>"
+      << std::endl;
+}
+
+} // namespace shinano::<anonymous-namespace>
 
 // v6 to v4
 template <>
@@ -32,13 +46,7 @@ translate<ipv4>(wrap<tuntap> fwd, wrap<input_buffer> b) try
     switch (payload_protocol(iphdr))
     {
       case iana::protocol_number::icmp6:
-        std::cout << "[icmp6] "
-          << to_string(source(iphdr)) << " -> " << to_string(dest(iphdr))
-          << " / " << b.get().size() << " bytes"
-          << std::endl
-          << "    translate to [icmp] "
-          << to_string(lookup(source(iphdr))) << " -> " << "<<unspecified>>"
-          << std::endl;
+        icmp6(iphdr, lookup(source(iphdr)));
         break;
 
       default:
