@@ -48,14 +48,6 @@ private:
     std::array<std::uint8_t, maxcap> internal_buffer;
 
     template <typename T>
-    T *
-    data_as(size_type offset = 0) noexcept
-    {
-        return static_cast<T *>(static_cast<void *>(
-            static_cast<char *>(data()) + offset));
-    }
-
-    template <typename T>
     const T *
     data_as(size_type offset = 0) const noexcept
     {
@@ -97,12 +89,6 @@ public:
 
     ieee::protocol_number
     internet_protocol() const noexcept { return *data_as<ieee::protocol_number>(2); }
-
-    template <typename protocol>
-    auto
-    internet_header() noexcept
-      -> decltype(this->data_as<typename protocol::header>())
-    { return data_as<typename protocol::header>(4); }
 
     template <typename protocol>
     auto
