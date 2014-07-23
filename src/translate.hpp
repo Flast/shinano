@@ -93,8 +93,8 @@ public:
     template <typename protocol>
     auto
     internet_header() const noexcept
-      -> decltype(this->data_as<typename protocol::header>())
-    { return data_as<typename protocol::header>(4); }
+      -> decltype(*this->data_as<typename protocol::header>())
+    { return *data_as<typename protocol::header>(4); }
 };
 
 using input_buffer = buffer<IP_MAXPACKET>;

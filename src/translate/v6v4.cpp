@@ -25,19 +25,19 @@ template <>
 bool
 translate<ipv4>(wrap<tuntap> fwd, wrap<input_buffer> b) try
 {
-    auto iphdr = b.get().internet_header<ipv6>();
+    auto &iphdr = b.get().internet_header<ipv6>();
 
-    BOOST_ASSERT((iphdr->ip6_vfc >> 4) == 6);
+    BOOST_ASSERT((iphdr.ip6_vfc >> 4) == 6);
 
-    switch (payload_protocol(*iphdr))
+    switch (payload_protocol(iphdr))
     {
       case iana::protocol_number::icmp6:
         std::cout << "[icmp6] "
-          << to_string(source(*iphdr)) << " -> " << to_string(dest(*iphdr))
+          << to_string(source(iphdr)) << " -> " << to_string(dest(iphdr))
           << " / " << b.get().size() << " bytes"
           << std::endl
           << "    translate to [icmp] "
-          << to_string(lookup(source(*iphdr))) << " -> " << "<<unspecified>>"
+          << to_string(lookup(source(iphdr))) << " -> " << "<<unspecified>>"
           << std::endl;
         break;
 
