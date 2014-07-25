@@ -19,7 +19,7 @@ template <typename T>
 using wrap = std::reference_wrapper<T>;
 
 void
-icmp(const ipv4::header &iphdr, const in6_addr &unmapped)
+icmp(const ipv4::header &iphdr, const in6_addr &src, const in6_addr &dst)
 {
     const auto payload_length = net_to_host(iphdr.ip_len)
                               - (iphdr.ip_hl * 4);
@@ -29,7 +29,7 @@ icmp(const ipv4::header &iphdr, const in6_addr &unmapped)
       << " / " << payload_length << " bytes"
       << std::endl
       << "    translate to [icmp6] "
-      << "<<unspecified>>" << " -> " << to_string(unmapped)
+      << to_string(src) << " -> " << to_string(dst)
       << std::endl;
 }
 
@@ -44,10 +44,13 @@ translate<ipv6>(wrap<tuntap> fwd, wrap<input_buffer> b) try
 
     BOOST_ASSERT(iphdr.ip_v == 4);
 
+    auto srcv6 = make_embedded_address(source(iphdr), temporary_prefix(), temporary_plen());
+    auto dstv6 = lookup(dest(iphdr));
+
     switch (payload_protocol(iphdr))
     {
       case iana::protocol_number::icmp:
-        icmp(iphdr, lookup(dest(iphdr)));
+        icmp(iphdr, srcv6, dstv6);
         break;
 
       default:

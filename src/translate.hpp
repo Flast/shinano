@@ -109,8 +109,13 @@ template <typename Target>
 bool
 translate(std::reference_wrapper<tuntap>, std::reference_wrapper<input_buffer>);
 
+
 void
 temporary_table_init();
+const in6_addr &
+temporary_prefix() noexcept;
+std::size_t
+temporary_plen() noexcept;
 
 } // namespace shinano
 

@@ -36,9 +36,13 @@ struct nat_entry
     time_point updated_at;
 };
 
+std::deque<nat_entry> table;
+
 // Store v4 address in host order.
 interval_set<decltype(in_addr::s_addr)> free_list;
-std::deque<nat_entry> table;
+
+in6_addr prefix;
+std::size_t prefix_len;
 
 void
 reclaim()
@@ -136,6 +140,24 @@ temporary_table_init()
 
     auto isa = interval::open(net_to_host(begin.s_addr), net_to_host(end.s_addr));
     free_list += isa;
+
+    prefix_len = 96;
+    if (inet_pton(AF_INET6, "64:ff9b::", &prefix) != 1)
+    {
+        throw_with_errno();
+    }
+}
+
+const in6_addr &
+temporary_prefix() noexcept
+{
+    return prefix;
+}
+
+std::size_t
+temporary_plen() noexcept
+{
+    return prefix_len;
 }
 
 } // namespace shinano

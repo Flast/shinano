@@ -42,6 +42,12 @@ payload_protocol(const ip6_hdr &hdr) noexcept
 { return static_cast<iana::protocol_number>(hdr.ip6_nxt); }
 
 
+in_addr
+extract_embedded_address(const in6_addr &embed, const in6_addr &prefix, std::size_t plen);
+
+in6_addr
+make_embedded_address(const in_addr &x, const in6_addr &prefix, std::size_t plen);
+
 } // namespace shinano
 
 #endif
