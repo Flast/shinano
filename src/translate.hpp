@@ -47,6 +47,14 @@ private:
     size_type length_;
     std::array<std::uint8_t, maxcap> internal_buffer;
 
+    constexpr size_type
+    overhead() noexcept
+    {
+        // tun/tap interface (w/o no_pi option) will include packet informations
+        // before actual packet.
+        return 4;
+    }
+
     template <typename T>
     const T *
     data_as(size_type offset = 0) const noexcept
@@ -94,7 +102,7 @@ public:
     auto
     internet_header() const noexcept
       -> decltype(*this->data_as<typename protocol::header>())
-    { return *data_as<typename protocol::header>(4); }
+    { return *data_as<typename protocol::header>(overhead()); }
 };
 
 using input_buffer = buffer<IP_MAXPACKET>;
