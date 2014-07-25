@@ -29,13 +29,13 @@ struct buffer
     capacity() noexcept { return internal_buffer.size(); }
 
     size_type
-    size() const noexcept { return length; }
+    size() const noexcept { return length_; }
 
     void
     resize(size_type newlen) noexcept
     {
         BOOST_ASSERT(capacity() >= newlen);
-        length = newlen;
+        length_ = newlen;
     }
 
     void *
@@ -44,7 +44,7 @@ struct buffer
     data() const noexcept { return internal_buffer.data(); }
 
 private:
-    size_type length;
+    size_type length_;
     std::array<std::uint8_t, maxcap> internal_buffer;
 
     template <typename T>
