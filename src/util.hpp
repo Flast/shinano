@@ -33,6 +33,10 @@ inline constexpr       in6_addr & dest(      ip6_hdr &hdr) noexcept { return hdr
 inline constexpr const in6_addr & dest(const ip6_hdr &hdr) noexcept { return hdr.ip6_dst; }
 
 
+inline constexpr std::size_t length(const ip      &hdr) noexcept { return hdr.ip_hl * 4; }
+inline constexpr std::size_t length(const ip6_hdr &hdr) noexcept { return sizeof(ip6_hdr); }
+
+
 inline constexpr iana::protocol_number
 payload_protocol(const ip &hdr) noexcept
 { return static_cast<iana::protocol_number>(hdr.ip_p); }

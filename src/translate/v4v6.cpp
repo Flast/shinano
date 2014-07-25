@@ -21,8 +21,7 @@ using wrap = std::reference_wrapper<T>;
 void
 icmp(const ipv4::header &iphdr, const in6_addr &src, const in6_addr &dst)
 {
-    const auto payload_length = net_to_host(iphdr.ip_len)
-                              - (iphdr.ip_hl * 4);
+    const auto payload_length = net_to_host(iphdr.ip_len) - length(iphdr);
 
     std::cout << "[icmp] "
       << to_string(source(iphdr)) << " -> " << to_string(dest(iphdr))

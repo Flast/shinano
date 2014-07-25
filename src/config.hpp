@@ -54,7 +54,6 @@ struct ipv4 { // pseudo-namespace
 static constexpr auto domain = AF_INET;
 
 typedef ip header;
-static constexpr auto header_length = sizeof(header);
 
 typedef sockaddr_in sockaddr;
 
@@ -67,7 +66,6 @@ struct ipv6 { // pseudo-namespace
 static constexpr auto domain = AF_INET6;
 
 typedef ip6_hdr header;
-static constexpr auto header_length = sizeof(header);
 
 typedef sockaddr_in6 sockaddr;
 
