@@ -127,6 +127,13 @@ struct controllable
         int err = ::setsockopt(static_cast<Socket *>(this)->native(), level, optname, std::forward<O>(optval), optlen);
         if (err < 0) { throw_with_errno(); }
     }
+
+    void
+    setsockopt(int level, int optname, bool optval)
+    {
+        const int val = optval ? 1 : 0;
+        setsockopt(level, optname, &val, sizeof(val));
+    }
 };
 
 } // namespace shinano::detail::mixin
@@ -134,10 +141,11 @@ struct controllable
 } // namespace shinano::detail
 
 struct controle_socket : detail::safe_desc
-              , detail::mixin::controllable<controle_socket>
+                       , detail::mixin::controllable<controle_socket>
 {
     controle_socket();
 };
+
 
 struct tuntap : detail::safe_desc
               , detail::mixin::controllable<tuntap>
@@ -164,6 +172,21 @@ make_tuntap(Args &&... args)
 {
     return {Tag{}, std::forward<Args>(args)...};
 }
+
+
+struct raw : detail::safe_desc
+           , detail::mixin::controllable<tuntap>
+           , detail::mixin::writeable<tuntap>
+{
+    static constexpr struct ipv4_tag {} ipv4 = {};
+    static constexpr struct ipv6_tag {} ipv6 = {};
+
+    explicit
+    raw(int family);
+
+    raw(ipv4_tag);
+    raw(ipv6_tag);
+};
 
 } // namespace shinano
 
