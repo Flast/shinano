@@ -121,7 +121,7 @@ struct translate_error : std::runtime_error
 
 template <typename Target>
 bool
-translate(std::reference_wrapper<tuntap>, std::reference_wrapper<input_buffer>);
+translate(std::reference_wrapper<raw>, std::reference_wrapper<input_buffer>);
 
 } // namespace shinano
 

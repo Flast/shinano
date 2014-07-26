@@ -18,24 +18,24 @@
 using namespace shinano;
 
 void
-do_work(tuntap io)
+do_work(tuntap is, raw os4, raw os6)
 {
     input_buffer buffer;
 
     while (true)
     {
-        if (io.read(buffer) < 0) { throw_with_errno(); }
+        if (is.read(buffer) < 0) { throw_with_errno(); }
 
         switch (buffer.internet_protocol())
         {
           case ieee::protocol_number::ip:
             // v4 to v6
-            if (translate<ipv6>(io, buffer)) { continue; }
+            if (translate<ipv6>(os6, buffer)) { continue; }
             break;
 
           case ieee::protocol_number::ipv6:
             // v6 to v4
-            if (translate<ipv4>(io, buffer)) { continue; }
+            if (translate<ipv4>(os4, buffer)) { continue; }
             break;
         }
         std::cout
@@ -48,10 +48,13 @@ do_work(tuntap io)
 
 int main(int argc, char **argv) try
 {
-    auto io = make_tuntap<tuntap::tun_tag>(argv[1]);
-    io.up();
+    auto is = make_tuntap<tuntap::tun_tag>(argv[1]);
+    is.up();
 
-    do_work(std::move(io));
+    auto os4 = make_raw<raw::ipv4_tag>();
+    auto os6 = make_raw<raw::ipv6_tag>();
+
+    do_work(std::move(is), std::move(os4), std::move(os6));
 }
 catch (boost::exception &e)
 {

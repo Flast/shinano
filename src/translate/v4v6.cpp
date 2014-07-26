@@ -21,7 +21,7 @@ using wrap = std::reference_wrapper<T>;
 // v4 to v6
 template <>
 bool
-translate<ipv6>(wrap<tuntap> fwd, wrap<input_buffer> b) try
+translate<ipv6>(wrap<raw> fwd, wrap<input_buffer> b) try
 {
     auto iphdr = b.get().internet_header<ipv4>();
 

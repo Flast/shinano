@@ -188,6 +188,13 @@ struct raw : detail::safe_desc
     raw(ipv6_tag);
 };
 
+template <typename Tag, typename... Args>
+inline raw
+make_raw(Args &&... args)
+{
+    return {Tag{}, std::forward<Args>(args)...};
+}
+
 } // namespace shinano
 
 #endif

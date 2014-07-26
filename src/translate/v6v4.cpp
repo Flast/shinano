@@ -21,7 +21,7 @@ namespace shinano {
 // v6 to v4
 template <>
 bool
-translate<ipv4>(wrap<tuntap> fwd, wrap<input_buffer> b) try
+translate<ipv4>(wrap<raw> fwd, wrap<input_buffer> b) try
 {
     auto iphdr = b.get().internet_header<ipv6>();
 
