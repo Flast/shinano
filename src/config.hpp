@@ -12,7 +12,9 @@
 #include <boost/predef/other/endian.h>
 
 #include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
 #include <netinet/ip6.h>
+#include <netinet/icmp6.h>
 
 namespace shinano {
 
@@ -53,7 +55,8 @@ struct ipv4 { // pseudo-namespace
 
 static constexpr auto domain = AF_INET;
 
-typedef ip header;
+typedef ip      header;
+typedef icmphdr icmp_header;
 
 typedef sockaddr_in sockaddr;
 
@@ -65,7 +68,8 @@ struct ipv6 { // pseudo-namespace
 
 static constexpr auto domain = AF_INET6;
 
-typedef ip6_hdr header;
+typedef ip6_hdr   header;
+typedef icmp6_hdr icmp6_header;
 
 typedef sockaddr_in6 sockaddr;
 
@@ -102,6 +106,51 @@ enum class protocol_number : std::uint8_t
     icmp6      = 58,
     ipv6_nonxt = 59,
     ipv6_opts  = 60,
+};
+
+// ICMP message type
+// http://tools.ietf.org/html/rfc792
+enum class icmp_type : std::uint8_t
+{
+    destination_unreachable = 3,
+    time_exceeded = 11,
+    parameter_problem = 12,
+    source_quench = 4,
+    redirect = 5,
+
+    echo_request = 8,
+    echo_reply = 0,
+
+    timestamp_request = 13,
+    timestamp_reply = 14,
+
+    information_request = 15,
+    information_reply = 16,
+};
+
+// ICMPv6 message type
+// http://tools.ietf.org/html/rfc4443
+enum class icmp6_type : std::uint8_t
+{
+    // From 1 to 127 show error message.
+    destination_unreachable = 1,
+    packet_too_big = 2,
+    time_exceeded = 3,
+    parameter_problem = 4,
+
+    experimentation_error_1 = 100,
+    experimentation_error_2 = 101,
+
+    reserved_for_error = 127,
+
+    // From 128 to 255 show informational message.
+    echo_request = 128,
+    echo_reply = 129,
+
+    experimentation_informational_1 = 200,
+    experimentation_informational_2 = 201,
+
+    reserved_for_informational = 255,
 };
 
 } // namespace iana
