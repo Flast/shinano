@@ -19,17 +19,24 @@ template <typename T>
 using wrap = std::reference_wrapper<T>;
 
 void
-icmp6(const ipv6::header &iphdr, const in_addr &src, const in_addr &dst)
+temporary_show_detail(const char *from, const char *to,
+                      const ipv6::header &iphdr, const in_addr &src, const in_addr &dst)
 {
     const auto payload_length = net_to_host(iphdr.ip6_plen);
 
-    std::cout << "[icmp6] "
+    std::cout << "[" << from << "] "
       << to_string(source(iphdr)) << " -> " << to_string(dest(iphdr))
       << " / " << payload_length << " bytes"
       << std::endl
-      << "    translate to [icmp] "
+      << "    translate to [" << to << "] "
       << to_string(src) << " -> " << to_string(dst)
       << std::endl;
+}
+
+void
+icmp6(const ipv6::header &iphdr, const in_addr &src, const in_addr &dst)
+{
+    temporary_show_detail("icmp6", "icmp", iphdr, src, dst);
 }
 
 } // namespace shinano::<anonymous-namespace>
