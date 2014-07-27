@@ -44,7 +44,7 @@ icmp6(const ipv6::header &iphdr, const in_addr &src, const in_addr &dst)
 // v6 to v4
 template <>
 bool
-translate<ipv4>(wrap<tuntap> fwd, wrap<input_buffer> b) try
+translate<ipv4>(wrap<raw> fwd, wrap<input_buffer> b) try
 {
     auto &iphdr = b.get().internet_header<ipv6>();
 

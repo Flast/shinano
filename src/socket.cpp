@@ -21,6 +21,7 @@ controle_socket::controle_socket()
 {
 }
 
+
 tuntap::tuntap(int flags, std::string name)
   : safe_desc(::open("/dev/net/tun", O_RDWR))
 {
@@ -55,6 +56,22 @@ tuntap::up(bool up)
     if (up) { ifr.ifr_flags |=  IFF_UP; }
     else    { ifr.ifr_flags &= ~IFF_UP; }
     cs.ioctl(SIOCSIFFLAGS, &ifr);
+}
+
+
+raw::raw(int family)
+  : safe_desc(::socket(family, SOCK_RAW, IPPROTO_RAW))
+{
+}
+
+raw::raw(raw::ipv4_tag)
+  : raw(AF_INET)
+{
+}
+
+raw::raw(raw::ipv6_tag)
+  : raw(AF_INET6)
+{
 }
 
 } // namespace shinano
