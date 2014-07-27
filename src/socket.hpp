@@ -69,7 +69,6 @@ namespace mixin {
 template <typename Desc>
 struct writeable
 {
-    template <typename T>
     std::size_t
     write(const void *buf, size_t len)
     {
@@ -175,8 +174,8 @@ make_tuntap(Args &&... args)
 
 
 struct raw : detail::safe_desc
-           , detail::mixin::controllable<tuntap>
-           , detail::mixin::writeable<tuntap>
+           , detail::mixin::controllable<raw>
+           , detail::mixin::writeable<raw>
 {
     static constexpr struct ipv4_tag {} ipv4 = {};
     static constexpr struct ipv6_tag {} ipv6 = {};
