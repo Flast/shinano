@@ -108,14 +108,14 @@ struct readable
     }
 };
 
-template <typename Socket>
+template <typename Desc>
 struct controllable
 {
     template <typename... Args>
     void
     ioctl(int request, Args... args)
     {
-        int err = ::ioctl(static_cast<Socket *>(this)->native(), request, std::forward<Args>(args)...);
+        int err = ::ioctl(static_cast<Desc *>(this)->native(), request, std::forward<Args>(args)...);
         if (err < 0) { throw_with_errno(); }
     }
 
@@ -123,7 +123,7 @@ struct controllable
     void
     setsockopt(int level, int optname, O&& optval, size_t optlen)
     {
-        int err = ::setsockopt(static_cast<Socket *>(this)->native(), level, optname, std::forward<O>(optval), optlen);
+        int err = ::setsockopt(static_cast<Desc *>(this)->native(), level, optname, std::forward<O>(optval), optlen);
         if (err < 0) { throw_with_errno(); }
     }
 
