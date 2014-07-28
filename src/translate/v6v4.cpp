@@ -111,7 +111,7 @@ icmp6(raw &fwd, const input_buffer &b, const in_addr &src, const in_addr &dst)
         outbound_icmp.type = static_cast<std::uint8_t>(iana::icmp_type::echo_request);
         outbound[1].iov_len = 4;
         outbound[2].iov_base = const_cast<void *>(b.next_to_ip<ipv6>(outbound[1].iov_len));
-        outbound[2].iov_len = net_to_host(iphdr.ip6_plen) - length(iphdr) - outbound[1].iov_len;
+        outbound[2].iov_len = net_to_host(iphdr.ip6_plen) - outbound[1].iov_len;
         break;
 
       case iana::icmp6_type::echo_reply:
@@ -119,7 +119,7 @@ icmp6(raw &fwd, const input_buffer &b, const in_addr &src, const in_addr &dst)
         outbound_icmp.type = static_cast<std::uint8_t>(iana::icmp_type::echo_reply);
         outbound[1].iov_len = 4;
         outbound[2].iov_base = const_cast<void *>(b.next_to_ip<ipv6>(outbound[1].iov_len));
-        outbound[2].iov_len = net_to_host(iphdr.ip6_plen) - length(iphdr) - outbound[1].iov_len;
+        outbound[2].iov_len = net_to_host(iphdr.ip6_plen) - outbound[1].iov_len;
         break;
 
       default:
