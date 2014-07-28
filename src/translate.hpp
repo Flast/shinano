@@ -103,6 +103,14 @@ public:
     internet_header() const noexcept
       -> decltype(*this->data_as<typename protocol::header>())
     { return *data_as<typename protocol::header>(overhead()); }
+
+    template <typename protocol>
+    const void *
+    next_to_ip(std::size_t offset = 0) const noexcept
+    {
+        const auto &iphdr = internet_header<protocol>();
+        return data_as<const void *>(overhead() + length(iphdr) + offset);
+    }
 };
 
 using input_buffer = buffer<IP_MAXPACKET>;

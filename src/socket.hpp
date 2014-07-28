@@ -9,9 +9,11 @@
 #include <utility>
 #include <string>
 #include "detail/exception.hpp"
+#include "detail/designated_initializer.hpp"
 
 #include <unistd.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
 #include "config.hpp"
 
 #include <boost/assert.hpp>
@@ -83,6 +85,30 @@ struct writeable
       -> decltype(this->write(buf.data(), buf.size()))
     {
         return write(buf.data(), buf.size());
+    }
+
+    template <typename A>
+    std::size_t
+    sendmsg(const iovec *iov, int iovcnt, const A &addr, int flags = 0)
+    {
+        const auto m = designated((msghdr)) by
+        (
+          ((.msg_name = const_cast<A *>(&addr)))
+          ((.msg_namelen = sizeof(A)))
+          ((.msg_iov = const_cast<iovec *>(iov)))
+          ((.msg_iovlen = iovcnt))
+        );
+        auto err = ::sendmsg(static_cast<Desc *>(this)->native(), &m, flags);
+        if (err < 0) { throw_with_errno(); }
+        return err;
+    }
+
+    template <int N, typename A>
+    auto
+    sendmsg(const iovec (&iov)[N], const A &addr, int flags = 0)
+      -> decltype(this->sendmsg(iov, N, addr, flags))
+    {
+        return sendmsg(iov, N, addr, flags);
     }
 };
 
