@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <iostream>
+#include <cstdint>
 
 #include "config.hpp"
 #include "util.hpp"
@@ -11,8 +12,7 @@
 
 #include "translate.hpp"
 #include "translate/address_table.hpp"
-
-#include <algorithm>
+#include "translate/checksum.hpp"
 
 namespace shinano {
 
@@ -36,59 +36,25 @@ temporary_show_detail(const char *from, const char *to,
       << std::endl;
 }
 
-// return complement of checksum
-std::uint16_t
-icmp_ccs(const iovec &h, const iovec &pl)
-{
-    using word = std::uint16_t;
-
-    word sum = 0;
-
-    auto reducer = [](word a, word v)
-    {
-        auto x = a + net_to_host(v);
-        return x + (x >> 16);
-    };
-
-    {
-        auto b = reinterpret_cast<const word *>(h.iov_base);
-        sum = std::accumulate(b, b + (h.iov_len / 2), sum, reducer);
-    }
-
-    {
-        auto b = reinterpret_cast<const word *>(pl.iov_base);
-        auto e = b + (pl.iov_len / 2);
-        sum = std::accumulate(b, e, sum, reducer);
-
-        if (pl.iov_len % 2)
-        {
-            auto odd = *reinterpret_cast<const std::uint8_t *>(e) << 8;
-            sum = reducer(sum, odd);
-        }
-    }
-
-    return host_to_net(sum);
-}
-
 void
 icmp6(raw &fwd, const input_buffer &b, const in_addr &src, const in_addr &dst)
 {
     auto &iphdr = b.internet_header<ipv6>();
     auto icmp6 = static_cast<const ipv6::icmp6_header *>(b.next_to_ip<ipv6>());
 
-    iovec outbound[3];
+    iovec ob[3];
     const auto addr = designated((sockaddr_in)) by
     (
       ((.sin_family = AF_INET))
       ((.sin_addr   = dst))
     );
 
-    auto outbound_ip = designated((ipv4::header)) by
+    auto ob_ip = designated((ipv4::header)) by
     (
       ((.ip_v   = 4))
       ((.ip_hl  = sizeof(ipv4::header) / 4)) // have no option
       //((.ip_tos = <<unspecified>>))
-      //((.ip_len = <<TBD>>)) // XXX: or does kernel fill this field?
+      //((.ip_len = <<TBD>>)) // kernel fill this field iff 0
       //((.ip_id  = <<unspecified>>)) // kernel fill this field iff 0
       ((.ip_off = 0)) // fragment is not supported currently
       ((.ip_ttl = iphdr.ip6_hlim - 1))
@@ -97,29 +63,29 @@ icmp6(raw &fwd, const input_buffer &b, const in_addr &src, const in_addr &dst)
       ((.ip_src = src))
       ((.ip_dst = dst))
     );
-    outbound[0].iov_base = &outbound_ip;
-    outbound[0].iov_len  = sizeof(outbound_ip);
+    ob[0].iov_base = &ob_ip;
+    ob[0].iov_len  = sizeof(ob_ip);
 
-    auto outbound_icmp = designated((ipv4::icmp_header)) by ( );
-    outbound[1].iov_base = &outbound_icmp;
-    outbound[1].iov_len = sizeof(outbound_icmp);
+    auto ob_icmp   = designated((ipv4::icmp_header)) by ( );
+    ob[1].iov_base = &ob_icmp;
+    ob[1].iov_len  = sizeof(ob_icmp);
 
     switch (static_cast<iana::icmp6_type>(icmp6->icmp6_type))
     {
       case iana::icmp6_type::echo_request:
         temporary_show_detail("icmp6 echo req", "icmp echo req", iphdr, src, dst);
-        outbound_icmp.type = static_cast<std::uint8_t>(iana::icmp_type::echo_request);
-        outbound[1].iov_len = 4;
-        outbound[2].iov_base = const_cast<void *>(b.next_to_ip<ipv6>(outbound[1].iov_len));
-        outbound[2].iov_len = net_to_host(iphdr.ip6_plen) - outbound[1].iov_len;
+        ob_icmp.type   = static_cast<std::uint8_t>(iana::icmp_type::echo_request);
+        ob[1].iov_len  = 4;
+        ob[2].iov_base = const_cast<void *>(b.next_to_ip<ipv6>(ob[1].iov_len));
+        ob[2].iov_len  = plength(iphdr) - ob[1].iov_len;
         break;
 
       case iana::icmp6_type::echo_reply:
         temporary_show_detail("icmp6 echo rep", "icmp echo rep", iphdr, src, dst);
-        outbound_icmp.type = static_cast<std::uint8_t>(iana::icmp_type::echo_reply);
-        outbound[1].iov_len = 4;
-        outbound[2].iov_base = const_cast<void *>(b.next_to_ip<ipv6>(outbound[1].iov_len));
-        outbound[2].iov_len = net_to_host(iphdr.ip6_plen) - outbound[1].iov_len;
+        ob_icmp.type   = static_cast<std::uint8_t>(iana::icmp_type::echo_reply);
+        ob[1].iov_len  = 4;
+        ob[2].iov_base = const_cast<void *>(b.next_to_ip<ipv6>(ob[1].iov_len));
+        ob[2].iov_len  = plength(iphdr) - ob[1].iov_len;
         break;
 
       default:
@@ -127,8 +93,8 @@ icmp6(raw &fwd, const input_buffer &b, const in_addr &src, const in_addr &dst)
         return;
     }
 
-    outbound_icmp.checksum = ~icmp_ccs(outbound[1], outbound[2]);
-    fwd.sendmsg(outbound, addr);
+    ob_icmp.checksum = ~detail::ccs(ob[1], ob[2]);
+    fwd.sendmsg(ob, addr);
 }
 
 } // namespace shinano::<anonymous-namespace>
