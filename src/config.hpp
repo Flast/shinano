@@ -11,6 +11,7 @@
 #include <chrono>
 #include <boost/predef/other/endian.h>
 
+#include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/ip6.h>
@@ -70,6 +71,15 @@ static constexpr auto domain = AF_INET6;
 
 typedef ip6_hdr   header;
 typedef icmp6_hdr icmp6_header;
+
+struct pseudo_header
+{
+    in6_addr      pip6_src;
+    in6_addr      pip6_dst;
+    std::uint32_t pip6_plen;
+    std::uint8_t  _pip6_padding[3];
+    std::uint8_t  pip6_nxt;
+};
 
 typedef sockaddr_in6 sockaddr;
 
