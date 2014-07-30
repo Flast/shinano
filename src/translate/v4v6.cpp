@@ -119,7 +119,13 @@ translate<ipv6>(wrap<raw> fwd, wrap<input_buffer> b) try
     auto &iphdr = b.get().internet_header<ipv4>();
 
     BOOST_ASSERT(iphdr.ip_v == 4);
-    // TODO: should check TTL
+
+    if (iphdr.ip_ttl <= 1)
+    {
+        // FIXME: Should return icmp time exceeded error message.
+        std::cout << "info: time exceeded" << std::endl;
+        return true;
+    }
 
     auto srcv6 = make_embedded_address(source(iphdr), temporary_prefix(), temporary_plen());
     auto dstv6 = lookup(dest(iphdr));

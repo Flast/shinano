@@ -108,7 +108,13 @@ translate<ipv4>(wrap<raw> fwd, wrap<input_buffer> b) try
     auto &iphdr = b.get().internet_header<ipv6>();
 
     BOOST_ASSERT((iphdr.ip6_vfc >> 4) == 6);
-    // TODO: should check hop limit (aka TTL)
+
+    if (iphdr.ip6_hlim <= 1)
+    {
+        // FIXME: Should return icmp6 time exceeded error message.
+        std::cout << "info: time exceeded" << std::endl;
+        return true;
+    }
 
     auto srcv4 = lookup(source(iphdr));
     auto dstv4 = extract_embedded_address(dest(iphdr), temporary_prefix(), temporary_plen());
