@@ -27,13 +27,15 @@ temporary_show_detail(const char *from, const char *to,
 {
     const auto payload_length = net_to_host(iphdr.ip6_plen);
 
-    std::cout << "[" << from << "] "
-      << to_string(source(iphdr)) << " -> " << to_string(dest(iphdr))
-      << " / " << payload_length << " bytes"
-      << std::endl
+    std::cout
+      << "[" << from << "] "
+        << to_string(source(iphdr)) << " -> " << to_string(dest(iphdr))
+        << std::endl
+      << "    Hop limit " << int(iphdr.ip6_hlim) << " / " << payload_length << " bytes"
+        << std::endl
       << "    translate to [" << to << "] "
-      << to_string(src) << " -> " << to_string(dst)
-      << std::endl;
+        << to_string(src) << " -> " << to_string(dst)
+        << std::endl;
 }
 
 void
