@@ -64,14 +64,15 @@ icmp(raw &fwd, const input_buffer &b, const in6_addr &src, const in6_addr &dst)
 
     auto ob_icmp6  = designated((ipv6::icmp6_header)) by ( );
     ob[1].iov_base = &ob_icmp6;
-    ob[1].iov_len  = sizeof(ob_icmp6);
+    ob[1].iov_len  = 4;
 
+    // http://tools.ietf.org/html/rfc6145#section-4.2
+    // http://tools.ietf.org/html/rfc6145#section-4.3
     switch (static_cast<iana::icmp_type>(icmp->type))
     {
       case iana::icmp_type::echo_request:
         temporary_show_detail("icmp echo req", "icmp6 echo req", iphdr, src, dst);
         ob_icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::echo_request);
-        ob[1].iov_len       = 4;
         ob[2].iov_base      = const_cast<void *>(b.next_to_ip<ipv4>(ob[1].iov_len));
         ob[2].iov_len       = plength(iphdr) - ob[1].iov_len;
         break;
@@ -79,11 +80,11 @@ icmp(raw &fwd, const input_buffer &b, const in6_addr &src, const in6_addr &dst)
       case iana::icmp_type::echo_reply:
         temporary_show_detail("icmp echo rep", "icmp6 echo rep", iphdr, src, dst);
         ob_icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::echo_reply);
-        ob[1].iov_len       = 4;
         ob[2].iov_base      = const_cast<void *>(b.next_to_ip<ipv4>(ob[1].iov_len));
         ob[2].iov_len       = plength(iphdr) - ob[1].iov_len;
         break;
 
+      // others; silently drop
       default:
         temporary_show_detail("icmp", "icmp6", iphdr, src, dst);
         return;
