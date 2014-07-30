@@ -118,9 +118,11 @@ enum class protocol_number : std::uint8_t
     ipv6_opts  = 60,
 };
 
-// ICMP message type
 // http://tools.ietf.org/html/rfc792
-enum class icmp_type : std::uint8_t
+namespace icmp {
+
+// ICMP message type
+enum class type : std::uint8_t
 {
     destination_unreachable = 3,
     time_exceeded = 11,
@@ -138,9 +140,17 @@ enum class icmp_type : std::uint8_t
     information_reply = 16,
 };
 
-// ICMPv6 message type
+
+} // namespace iana::icmp
+
+using icmp_type [[gnu::deprecated("use iana::icmp::type")]] = icmp::type;
+
+
 // http://tools.ietf.org/html/rfc4443
-enum class icmp6_type : std::uint8_t
+namespace icmp6 {
+
+// ICMPv6 message type
+enum class type : std::uint8_t
 {
     // From 1 to 127 show error message.
     destination_unreachable = 1,
@@ -162,6 +172,10 @@ enum class icmp6_type : std::uint8_t
 
     reserved_for_informational = 255,
 };
+
+} // namespace iana::icmp6
+
+using icmp6_type [[gnu::deprecated("use iana::icmp6::type")]] = icmp6::type;
 
 } // namespace iana
 
