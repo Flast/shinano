@@ -42,7 +42,7 @@ icmp6(raw &fwd, const input_buffer &b, const in_addr &src, const in_addr &dst)
     auto &iphdr = b.internet_header<ipv6>();
     auto icmp6 = static_cast<const ipv6::icmp6_header *>(b.next_to_ip<ipv6>());
 
-    iovec ob[3];
+    iovec ob[3] = {};
     const auto addr = designated((sockaddr_in)) by
     (
       ((.sin_family = AF_INET))
