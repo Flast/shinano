@@ -39,6 +39,30 @@ temporary_show_detail(const char *from, const char *to,
 }
 
 void
+finalize_icmp6(iovec (&ob)[3]) noexcept
+{
+    auto &ob_ip6   = *static_cast<ipv6::header *>(ob[0].iov_base);
+    auto &ob_icmp6 = *static_cast<ipv6::icmp6_header *>(ob[1].iov_base);
+
+    ob_ip6.ip6_plen = host_to_net<std::uint16_t>(ob[1].iov_len + ob[2].iov_len);
+
+    const auto ph = designated((ipv6::pseudo_header)) by
+    (
+      ((.pip6_src  = ob_ip6.ip6_src))
+      ((.pip6_dst  = ob_ip6.ip6_dst))
+      ((.pip6_plen = ob_ip6.ip6_plen))
+      ((.pip6_nxt  = ob_ip6.ip6_nxt))
+    );
+    const auto phv = designated((iovec)) by
+    (
+      ((.iov_base = const_cast<void *>(static_cast<const void *>(&ph))))
+      ((.iov_len  = sizeof(ph)))
+    );
+
+    ob_icmp6.icmp6_cksum = ~detail::ccs(phv, ob[1], ob[2]);
+}
+
+void
 icmp(raw &fwd, const input_buffer &b, const in6_addr &src, const in6_addr &dst)
 {
     auto &iphdr = b.internet_header<ipv4>();
@@ -92,22 +116,7 @@ icmp(raw &fwd, const input_buffer &b, const in6_addr &src, const in6_addr &dst)
         return;
     }
 
-    ob_ip6.ip6_plen = host_to_net<std::uint16_t>(ob[1].iov_len + ob[2].iov_len);
-
-    const auto ph = designated((ipv6::pseudo_header)) by
-    (
-      ((.pip6_src  = ob_ip6.ip6_src))
-      ((.pip6_dst  = ob_ip6.ip6_dst))
-      ((.pip6_plen = ob_ip6.ip6_plen))
-      ((.pip6_nxt  = ob_ip6.ip6_nxt))
-    );
-    const auto phv = designated((iovec)) by
-    (
-      ((.iov_base = const_cast<void *>(static_cast<const void *>(&ph))))
-      ((.iov_len  = sizeof(ph)))
-    );
-
-    ob_icmp6.icmp6_cksum = ~detail::ccs(phv, ob[1], ob[2]);
+    finalize_icmp6(ob);
     fwd.sendmsg(ob, addr);
 }
 
