@@ -140,6 +140,35 @@ enum class type : std::uint8_t
     information_reply = 16,
 };
 
+enum class destination_unreachable : std::uint8_t
+{
+    net = 0,
+    host = 1,
+    protocol = 2,
+    port = 3,
+    fragmentation_needed = 4,
+    dont_fragment = fragmentation_needed,
+    source_route_failed = 5,
+};
+
+enum class time_exceeded : std::uint8_t
+{
+    ttl_exceeded = 0,
+    fragment_reassembly = 1,
+};
+
+enum class parameter_problem : std::uint8_t
+{
+    pointer_indicates = 0,
+};
+
+enum class redirect : std::uint8_t
+{
+    for_network = 0,
+    for_host = 1,
+    tos_and_for_network = 2,
+    tos_and_for_host = 3,
+};
 
 } // namespace iana::icmp
 
@@ -171,6 +200,30 @@ enum class type : std::uint8_t
     experimentation_informational_2 = 201,
 
     reserved_for_informational = 255,
+};
+
+enum class destination_unreachable : std::uint8_t
+{
+    no_route_to_destination = 0,
+    administratively_prohibited = 1,
+    beyond_scope_of_source = 2,
+    address = 3,
+    port = 4,
+    ingress_egress_policy = 5,
+    reject = 6,
+};
+
+enum class time_exceeded : std::uint8_t
+{
+    hop_limit_exceeded = 0,
+    fragment_reassembly = 1,
+};
+
+enum class parameter_problem : std::uint8_t
+{
+    header_field = 0,
+    next_header = 1,
+    option = 2,
 };
 
 } // namespace iana::icmp6
