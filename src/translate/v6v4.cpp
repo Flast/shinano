@@ -9,6 +9,7 @@
 #include "config.hpp"
 #include "util.hpp"
 #include "detail/designated_initializer.hpp"
+#include "detail/exception.hpp"
 
 #include "translate.hpp"
 #include "translate/address_table.hpp"
@@ -76,25 +77,80 @@ icmp6(raw &fwd, const input_buffer &b, const in_addr &src, const in_addr &dst)
     // http://tools.ietf.org/html/rfc6145#section-5.2
     switch (static_cast<iana::icmp6_type>(icmp6->icmp6_type))
     {
+      // ICMPv6 information message
+
       case iana::icmp6_type::echo_request:
-        temporary_show_detail("icmp6 echo req", "icmp echo req", iphdr, src, dst);
         ob_icmp.type   = static_cast<std::uint8_t>(iana::icmp_type::echo_request);
         ob[2].iov_base = const_cast<void *>(b.next_to_ip<ipv6>(ob[1].iov_len));
         ob[2].iov_len  = plength(iphdr) - ob[1].iov_len;
         break;
 
       case iana::icmp6_type::echo_reply:
-        temporary_show_detail("icmp6 echo rep", "icmp echo rep", iphdr, src, dst);
         ob_icmp.type   = static_cast<std::uint8_t>(iana::icmp_type::echo_reply);
         ob[2].iov_base = const_cast<void *>(b.next_to_ip<ipv6>(ob[1].iov_len));
         ob[2].iov_len  = plength(iphdr) - ob[1].iov_len;
         break;
 
+      // ICMPv6 error message
+
+      case iana::icmp6_type::destination_unreachable:
+        using iana::icmp::destination_unreachable;
+        ob_icmp.type = static_cast<std::uint8_t>(iana::icmp_type::destination_unreachable);
+
+        switch (static_cast<iana::icmp6::destination_unreachable>(icmp6->icmp6_code))
+        {
+          case iana::icmp6::destination_unreachable::no_route_to_destination:
+          case iana::icmp6::destination_unreachable::beyond_scope_of_source:
+          case iana::icmp6::destination_unreachable::address:
+            detail::throw_exception(translate_error("not implemented yet"));
+            ob_icmp.code = static_cast<std::uint8_t>(destination_unreachable::host);
+
+          case iana::icmp6::destination_unreachable::administratively_prohibited:
+            detail::throw_exception(translate_error("not implemented yet"));
+
+          case iana::icmp6::destination_unreachable::port:
+            detail::throw_exception(translate_error("not implemented yet"));
+            ob_icmp.code = static_cast<std::uint8_t>(destination_unreachable::port);
+
+          default:
+            detail::throw_exception(translate_error("unknown ICMPv6 code"));
+        }
+        break;
+
+      case iana::icmp6_type::packet_too_big:
+        detail::throw_exception(translate_error("not implemented yet"));
+        ob_icmp.type = static_cast<std::uint8_t>(iana::icmp_type::destination_unreachable);
+        ob_icmp.code = static_cast<std::uint8_t>(iana::icmp::destination_unreachable::fragmentation_needed);
+
+      case iana::icmp6_type::time_exceeded:
+        detail::throw_exception(translate_error("not implemented yet"));
+        ob_icmp.type = static_cast<std::uint8_t>(iana::icmp_type::time_exceeded);
+        ob_icmp.code = icmp6->icmp6_code;
+
+      case iana::icmp6_type::parameter_problem:
+        detail::throw_exception(translate_error("not implemented yet"));
+        ob_icmp.type = static_cast<std::uint8_t>(iana::icmp_type::parameter_problem);
+
+        switch (static_cast<iana::icmp6::parameter_problem>(icmp6->icmp6_code))
+        {
+          case iana::icmp6::parameter_problem::header_field:
+            detail::throw_exception(translate_error("not implemented yet"));
+            ob_icmp.code = static_cast<std::uint8_t>(iana::icmp::parameter_problem::pointer_indicates);
+
+          case iana::icmp6::parameter_problem::next_header:
+            detail::throw_exception(translate_error("not implemented yet"));
+            ob_icmp.code = static_cast<std::uint8_t>(iana::icmp::destination_unreachable::protocol);
+
+          default:
+            detail::throw_exception(translate_error("unknown ICMPv6 code"));
+        }
+        break;
+
       // others; silently drop
       default:
-        temporary_show_detail("icmp6", "icmp", iphdr, src, dst);
-        return;
+        detail::throw_exception(translate_error("unknown ICMPv6 type"));
     }
+    temporary_show_detail("icmp6", "icmp", iphdr, src, dst);
 
     ob_icmp.checksum = ~detail::ccs(ob[1], ob[2]);
     fwd.sendmsg(ob, addr);
