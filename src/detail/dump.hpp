@@ -46,7 +46,7 @@ dump(std::basic_ostream<CharT, T...> &ostr, const R &range)
     std::cout << std::hex;
     {
         int a[16];
-        boost::iota(a, 1);
+        boost::iota(a, 0);
         detail::dump_line(ostr << "      ", a);
     }
 
