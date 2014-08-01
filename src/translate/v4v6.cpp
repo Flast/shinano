@@ -40,7 +40,7 @@ temporary_show_detail(const char *from, const char *to,
 }
 
 void
-finalize_icmp6(iovec (&ob)[3]) noexcept
+finalize_icmp6(iovec (&ob)[5]) noexcept
 {
     auto &ob_ip6   = *static_cast<ipv6::header *>(ob[0].iov_base);
     auto &ob_icmp6 = *static_cast<ipv6::icmp6_header *>(ob[1].iov_base);
@@ -69,12 +69,15 @@ icmp(raw &fwd, buffer_ref b, const in6_addr &src, const in6_addr &dst)
     auto &iphdr = b.internet_header<ipv4>();
     const auto icmp = static_cast<const ipv4::icmp_header *>(b.next_to_ip<ipv4>());
 
-    iovec ob[3] = {};
-    const auto addr = designated((sockaddr_in6)) by
-    (
-      ((.sin6_family = AF_INET6))
-      ((.sin6_addr   = dst))
-    );
+    // We should treat 5 separated fields in icmp error message.
+    //
+    //             | icmp6 error message ...
+    // ip6 | icmp6 | ip6 | icmp6 | payload ...
+    //                v
+    //             | icmp error message ...
+    // ip  | icmp  | ip  | icmp  | payload ...
+    iovec ob[5] = {};
+    std::size_t ob_cnt = 3;
 
     auto ob_ip6 = designated((ipv6::header)) by
     (
@@ -182,7 +185,12 @@ icmp(raw &fwd, buffer_ref b, const in6_addr &src, const in6_addr &dst)
     temporary_show_detail("icmp", "icmp6", iphdr, src, dst);
 
     finalize_icmp6(ob);
-    fwd.sendmsg(ob, addr);
+
+    fwd.sendmsg(ob, ob_cnt, designated((sockaddr_in6)) by
+    (
+      ((.sin6_family = AF_INET6))
+      ((.sin6_addr   = dst))
+    ));
 }
 
 } // shinano::<anonymous-namespace>
