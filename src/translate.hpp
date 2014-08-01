@@ -14,38 +14,22 @@
 #include <array>
 
 #include "config.hpp"
+#include "util.hpp"
 #include "socket.hpp"
-
-#include <boost/assert.hpp>
 
 namespace shinano {
 
-template <std::size_t maxcap>
-struct buffer
+struct buffer_ref
 {
-    using size_type = std::size_t;
+    using value_type     = std::uint8_t;
+    using       pointer  =       value_type *;
+    using const_pointer  = const value_type *;
+    using       iterator =       pointer;
+    using const_iterator = const_pointer;
+    using size_type      = std::size_t;
 
-    constexpr size_type
-    capacity() noexcept { return internal_buffer.size(); }
-
-    size_type
-    size() const noexcept { return length_; }
-
-    void
-    resize(size_type newlen) noexcept
-    {
-        BOOST_ASSERT(capacity() >= newlen);
-        length_ = newlen;
-    }
-
-    void *
-    data() noexcept { return internal_buffer.data(); }
-    const void *
-    data() const noexcept { return internal_buffer.data(); }
-
-private:
+    pointer   ptr_;
     size_type length_;
-    std::array<std::uint8_t, maxcap> internal_buffer;
 
     constexpr size_type
     overhead() noexcept
@@ -63,34 +47,18 @@ private:
             static_cast<const char *>(data()) + offset));
     }
 
-public:
-    auto
-    begin() noexcept
-      -> decltype(this->internal_buffer.begin())
-    { return internal_buffer.begin(); }
+    size_type size() const noexcept { return length_; }
+    void resize(size_type newlen) noexcept { length_ = newlen; }
 
-    auto
-    begin() const noexcept
-      -> decltype(this->internal_buffer.begin())
-    { return internal_buffer.begin(); }
+          void * data()       noexcept { return ptr_; }
+    const void * data() const noexcept { return ptr_; }
 
-    auto
-    end() noexcept
-      -> decltype(this->internal_buffer.begin())
-    {
-        auto i = internal_buffer.begin();
-        std::advance(i, size());
-        return i;
-    }
+          iterator begin()       noexcept { return ptr_; }
+    const_iterator begin() const noexcept { return ptr_; }
 
-    auto
-    end() const noexcept
-      -> decltype(this->internal_buffer.begin())
-    {
-        auto i = internal_buffer.begin();
-        std::advance(i, size());
-        return i;
-    }
+          iterator end()       noexcept { return std::next(begin(), size()); }
+    const_iterator end() const noexcept { return std::next(begin(), size()); }
+
 
     std::uint16_t
     flags() const noexcept { return *data_as<std::uint16_t>(); }
@@ -99,9 +67,8 @@ public:
     internet_protocol() const noexcept { return *data_as<ieee::protocol_number>(2); }
 
     template <typename protocol>
-    auto
+    const typename protocol::header &
     internet_header() const noexcept
-      -> decltype(*this->data_as<typename protocol::header>())
     { return *data_as<typename protocol::header>(overhead()); }
 
     template <typename protocol>
@@ -109,11 +76,18 @@ public:
     next_to_ip(std::size_t offset = 0) const noexcept
     {
         const auto &iphdr = internet_header<protocol>();
-        return data_as<const void *>(overhead() + length(iphdr) + offset);
+        return data_as<void>(overhead() + length(iphdr) + offset);
     }
 };
 
-using input_buffer = buffer<IP_MAXPACKET>;
+template <typename B>
+inline buffer_ref
+make_buffer_ref(B &b, std::size_t l) noexcept
+{
+    return {b.data(), l};
+}
+
+using input_buffer = std::array<std::uint8_t, IP_MAXPACKET>;
 
 
 struct translate_error : std::runtime_error
@@ -123,7 +97,7 @@ struct translate_error : std::runtime_error
 
 template <typename Target>
 bool
-translate(std::reference_wrapper<raw>, std::reference_wrapper<input_buffer>);
+translate(std::reference_wrapper<raw>, buffer_ref);
 
 
 void

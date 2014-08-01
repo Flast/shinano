@@ -21,25 +21,30 @@ do_work(tuntap is, raw os4, raw os6)
 
     while (true)
     {
-        if (is.read(buffer) < 0) { throw_with_errno(); }
+        auto bref = [&]() -> buffer_ref
+        {
+            const auto len = is.read(buffer);
+            if (len < 0) { throw_with_errno(); }
+            return make_buffer_ref(buffer, len);
+        }();
 
-        switch (buffer.internet_protocol())
+        switch (bref.internet_protocol())
         {
           case ieee::protocol_number::ip:
             // v4 to v6
-            if (translate<ipv6>(os6, buffer)) { continue; }
+            if (translate<ipv6>(os6, bref)) { continue; }
             break;
 
           case ieee::protocol_number::ipv6:
             // v6 to v4
-            if (translate<ipv4>(os4, buffer)) { continue; }
+            if (translate<ipv4>(os4, bref)) { continue; }
             break;
         }
         std::cout
           << "warning: unknown internet layer protocol"
-          << " (in " << buffer.size() << " bytes)"
+          << " (in " << bref.size() << " bytes)"
           << std::endl;
-        debug::dump(std::cout, buffer);
+        debug::dump(std::cout, bref);
     }
 }
 

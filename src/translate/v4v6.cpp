@@ -64,7 +64,7 @@ finalize_icmp6(iovec (&ob)[3]) noexcept
 }
 
 void
-icmp(raw &fwd, const input_buffer &b, const in6_addr &src, const in6_addr &dst)
+icmp(raw &fwd, buffer_ref b, const in6_addr &src, const in6_addr &dst)
 {
     auto &iphdr = b.internet_header<ipv4>();
     const auto icmp = static_cast<const ipv4::icmp_header *>(b.next_to_ip<ipv4>());
@@ -190,9 +190,9 @@ icmp(raw &fwd, const input_buffer &b, const in6_addr &src, const in6_addr &dst)
 // v4 to v6
 template <>
 bool
-translate<ipv6>(wrap<raw> fwd, wrap<input_buffer> b) try
+translate<ipv6>(wrap<raw> fwd, buffer_ref b) try
 {
-    auto &iphdr = b.get().internet_header<ipv4>();
+    auto &iphdr = b.internet_header<ipv4>();
 
     BOOST_ASSERT(iphdr.ip_v == 4);
 

@@ -126,11 +126,9 @@ struct readable
     template <typename B>
     auto
     read(B &buf)
-      -> decltype(this->read(buf.data(), buf.capacity()))
+      -> decltype(this->read(buf.data(), buf.size()))
     {
-        auto ret = read(buf.data(), buf.capacity());
-        buf.resize(ret);
-        return ret;
+        return read(buf.data(), buf.size());
     }
 };
 

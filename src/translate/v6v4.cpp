@@ -40,7 +40,7 @@ temporary_show_detail(const char *from, const char *to,
 }
 
 void
-icmp6(raw &fwd, const input_buffer &b, const in_addr &src, const in_addr &dst)
+icmp6(raw &fwd, buffer_ref b, const in_addr &src, const in_addr &dst)
 {
     auto &iphdr = b.internet_header<ipv6>();
     auto icmp6 = static_cast<const ipv6::icmp6_header *>(b.next_to_ip<ipv6>());
@@ -161,9 +161,9 @@ icmp6(raw &fwd, const input_buffer &b, const in_addr &src, const in_addr &dst)
 // v6 to v4
 template <>
 bool
-translate<ipv4>(wrap<raw> fwd, wrap<input_buffer> b) try
+translate<ipv4>(wrap<raw> fwd, buffer_ref b) try
 {
-    auto &iphdr = b.get().internet_header<ipv6>();
+    auto &iphdr = b.internet_header<ipv6>();
 
     BOOST_ASSERT((iphdr.ip6_vfc >> 4) == 6);
 
