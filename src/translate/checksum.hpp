@@ -13,6 +13,7 @@
 
 #include "config.hpp"
 #include "util.hpp"
+#include "mpl/index_tuple.hpp"
 
 namespace shinano { namespace detail {
 
@@ -64,17 +65,40 @@ _ccs(int &x, const iovec &v1, const iovec &v2, const T &... tail) noexcept
     return reducer(a, _ccs(x, v2, tail...));
 }
 
+template <int N, int... I>
+inline std::size_t
+_i_ccs(const iovec (&v)[N], mpl::index_tuple<I...>) noexcept
+{
+    return ccs(v[I]...);
+}
+
 } // namespace shinano::detail::aux
+
 
 // return complement of checksum
 // see: RFC700  http://tools.ietf.org/html/rfc700
 //      RFC1071 http://tools.ietf.org/html/rfc1071
+
 template <typename... T>
 inline std::uint16_t
 ccs(const T &... v) noexcept
 {
     int x = 0;
     return aux::_ccs(x, v...);
+}
+
+template <int N>
+inline std::size_t
+i_ccs(const iovec (&v)[N]) noexcept
+{
+    return aux::_i_ccs(v, mpl::make_index_tuple<N>());
+}
+
+template <int M, int N>
+inline std::size_t
+i_ccs(const iovec (&v)[N]) noexcept
+{
+    return aux::_i_ccs(v, mpl::make_index_tuple<N, M>());
 }
 
 } } // namespace shinano::detail
