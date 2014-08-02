@@ -28,16 +28,16 @@ do_work(tuntap is, raw os4, raw os6)
             return make_buffer_ref(buffer, len);
         }();
 
-        switch (bref.internet_protocol())
+        switch (*bref.data_as<ieee::protocol_number>(2))
         {
           case ieee::protocol_number::ip:
             // v4 to v6
-            if (translate<ipv6>(os6, bref)) { continue; }
+            if (translate<ipv6>(os6, bref.next_to(4))) { continue; }
             break;
 
           case ieee::protocol_number::ipv6:
             // v6 to v4
-            if (translate<ipv4>(os4, bref)) { continue; }
+            if (translate<ipv4>(os4, bref.next_to(4))) { continue; }
             break;
         }
         std::cout

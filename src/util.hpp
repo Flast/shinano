@@ -34,8 +34,13 @@ inline constexpr const in6_addr & dest(const ip6_hdr &hdr) noexcept { return hdr
 
 
 // header length
-inline constexpr std::size_t length(const ip      &hdr) noexcept { return hdr.ip_hl * 4; }
-inline constexpr std::size_t length(const ip6_hdr &hdr) noexcept { return sizeof(ip6_hdr); }
+inline constexpr std::size_t length(const ip        &hdr) noexcept { return hdr.ip_hl * 4; }
+inline constexpr std::size_t length(const ip6_hdr   &hdr) noexcept { return sizeof(ip6_hdr); }
+inline constexpr std::size_t length(const icmphdr   &hdr) noexcept { return 4; }
+inline constexpr std::size_t length(const icmp6_hdr &hdr) noexcept { return 4; }
+
+template <typename T>
+inline constexpr std::size_t length(const T &v) noexcept { return sizeof(T); }
 
 // payload length
 inline constexpr std::size_t plength(const ip      &hdr) noexcept

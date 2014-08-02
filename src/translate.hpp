@@ -31,13 +31,17 @@ struct buffer_ref
     pointer   ptr_;
     size_type length_;
 
-    constexpr size_type
-    overhead() noexcept
-    {
-        // tun/tap interface (w/o no_pi option) will include packet informations
-        // before actual packet.
-        return 4;
-    }
+    size_type size() const noexcept { return length_; }
+    void resize(size_type newlen) noexcept { length_ = newlen; }
+
+          iterator begin()       noexcept { return ptr_; }
+    const_iterator begin() const noexcept { return ptr_; }
+
+          iterator end()       noexcept { return std::next(begin(), size()); }
+    const_iterator end() const noexcept { return std::next(begin(), size()); }
+
+          void * data()       noexcept { return ptr_; }
+    const void * data() const noexcept { return ptr_; }
 
     template <typename T>
     T *
@@ -55,38 +59,15 @@ struct buffer_ref
             static_cast<const char *>(data()) + offset);
     }
 
-    size_type size() const noexcept { return length_; }
-    void resize(size_type newlen) noexcept { length_ = newlen; }
-
-          void * data()       noexcept { return ptr_; }
-    const void * data() const noexcept { return ptr_; }
-
-          iterator begin()       noexcept { return ptr_; }
-    const_iterator begin() const noexcept { return ptr_; }
-
-          iterator end()       noexcept { return std::next(begin(), size()); }
-    const_iterator end() const noexcept { return std::next(begin(), size()); }
-
-
-    std::uint16_t
-    flags() const noexcept { return *data_as<std::uint16_t>(); }
-
-    ieee::protocol_number
-    internet_protocol() const noexcept { return *data_as<ieee::protocol_number>(2); }
-
-    template <typename protocol>
-    const typename protocol::header &
-    internet_header() const noexcept
-    { return *data_as<typename protocol::header>(overhead()); }
-
-    template <typename protocol>
     buffer_ref
-    next_to_ip(std::size_t offset = 0) noexcept
+    next_to(size_type skip) noexcept
     {
-        const auto &iphdr = internet_header<protocol>();
-        const auto skip = overhead() + length(iphdr) + offset;
-        return {data_as<value_type>(skip), skip};
+        return {data_as<value_type>(skip), size() - skip};
     }
+
+    template <typename T>
+    buffer_ref
+    next_to() noexcept { return next_to(length(*data_as<T>())); }
 };
 
 template <typename B>
@@ -107,6 +88,33 @@ struct translate_error : std::runtime_error
 template <typename Target>
 bool
 translate(std::reference_wrapper<raw>, buffer_ref);
+
+struct translate_breaked : std::exception
+{
+    explicit
+    translate_breaked(std::string what, bool ret = true)
+      : _w(what), _ret(ret) { }
+
+    virtual const char *
+    what() const noexcept override
+    {
+        return _w.c_str();
+    }
+
+    bool
+    ret() const noexcept { return _ret; }
+
+private:
+    std::string _w;
+    bool        _ret;
+};
+
+template <typename... T>
+inline void
+translate_break(T &&... v)
+{
+    throw translate_breaked(std::forward<T>(v)...);
+}
 
 
 void
