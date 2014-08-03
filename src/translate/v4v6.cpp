@@ -67,7 +67,7 @@ void
 icmp(raw &fwd, buffer_ref b, const in6_addr &src, const in6_addr &dst)
 {
     auto &iphdr = b.internet_header<ipv4>();
-    const auto icmp = static_cast<const ipv4::icmp_header *>(b.next_to_ip<ipv4>());
+    const auto icmp = static_cast<const ipv4::icmp_header *>(b.next_to_ip<ipv4>().data());
 
     // We should treat 5 separated fields in icmp error message.
     //
@@ -102,13 +102,13 @@ icmp(raw &fwd, buffer_ref b, const in6_addr &src, const in6_addr &dst)
     {
       case iana::icmp_type::echo_request:
         ob_icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::echo_request);
-        ob[2].iov_base      = const_cast<void *>(b.next_to_ip<ipv4>(ob[1].iov_len));
+        ob[2].iov_base      = b.next_to_ip<ipv4>(ob[1].iov_len).data();
         ob[2].iov_len       = plength(iphdr) - ob[1].iov_len;
         break;
 
       case iana::icmp_type::echo_reply:
         ob_icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::echo_reply);
-        ob[2].iov_base      = const_cast<void *>(b.next_to_ip<ipv4>(ob[1].iov_len));
+        ob[2].iov_base      = b.next_to_ip<ipv4>(ob[1].iov_len).data();
         ob[2].iov_len       = plength(iphdr) - ob[1].iov_len;
         break;
 

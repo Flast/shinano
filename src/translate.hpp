@@ -40,11 +40,19 @@ struct buffer_ref
     }
 
     template <typename T>
+    T *
+    data_as(size_type offset = 0) noexcept
+    {
+        return reinterpret_cast<T *>(
+            static_cast<char *>(data()) + offset);
+    }
+
+    template <typename T>
     const T *
     data_as(size_type offset = 0) const noexcept
     {
-        return static_cast<const T *>(static_cast<const void *>(
-            static_cast<const char *>(data()) + offset));
+        return reinterpret_cast<const T *>(
+            static_cast<const char *>(data()) + offset);
     }
 
     size_type size() const noexcept { return length_; }
@@ -72,11 +80,12 @@ struct buffer_ref
     { return *data_as<typename protocol::header>(overhead()); }
 
     template <typename protocol>
-    const void *
-    next_to_ip(std::size_t offset = 0) const noexcept
+    buffer_ref
+    next_to_ip(std::size_t offset = 0) noexcept
     {
         const auto &iphdr = internet_header<protocol>();
-        return data_as<void>(overhead() + length(iphdr) + offset);
+        const auto skip = overhead() + length(iphdr) + offset;
+        return {data_as<value_type>(skip), skip};
     }
 };
 
