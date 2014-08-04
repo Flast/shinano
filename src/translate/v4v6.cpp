@@ -40,6 +40,34 @@ struct iov_ip6
     std::size_t (&iov_len)  = len;
 };
 
+template <bool x>
+using bool_ = std::integral_constant<bool, x>;
+
+template <int N, bool allow_recuse>
+std::size_t
+core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, bool_<allow_recuse> ar);
+
+template <int D, int N>
+inline typename std::enable_if<(N > D), iov_ip6(&)[N - D]>::type
+drop(iov_ip6 (&iov)[N])
+{
+    return *reinterpret_cast<iov_ip6(*)[N - D]>(iov + D);
+}
+
+template <int N>
+inline std::size_t
+dispatch_core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, bool_<true>)
+{
+    return core(iov, b, src, dst, bool_<false>{});
+}
+
+template <int N>
+inline std::size_t
+dispatch_core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, bool_<false>)
+{
+    detail::throw_exception(translate_error("ICMP error message containts ICMP error message"));
+}
+
 void
 temporary_show_detail(const char *from, const char *to,
                       const ipv4::header &iphdr, const in6_addr &src, const in6_addr &dst)
@@ -89,9 +117,9 @@ finalize_icmp6(iov_ip6 (&iov)[N]) noexcept
     iov[1].icmp6.icmp6_cksum = ~detail::i_ccs(piov);
 }
 
-template <int N>
+template <int N, bool allow_recuse>
 std::size_t
-icmp(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst)
+icmp(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, bool_<allow_recuse> ar)
 {
     auto &ip   = *b.data_as<ipv4::header>();
     auto bip   = b.next_to<ipv4::header>();
@@ -174,9 +202,15 @@ icmp(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst)
         translate_break("silently dropped: obsoleted in icmp6");
 
       case iana::icmp_type::time_exceeded:
-        detail::throw_exception(translate_error("not implemented yet"));
         iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::time_exceeded);
         iov[1].icmp6.icmp6_code = icmp.code;
+        {
+            auto b = bip.next_to<ipv4::icmp_header>();
+            auto &ip = *b.data_as<ipv4::header>();
+            auto srcv6 = lookup(source(ip));
+            auto dstv6 = make_embedded_address(dest(ip), temporary_prefix(), temporary_plen());
+            count = count - 1 + dispatch_core(drop<2>(iov), b, srcv6, dstv6, ar);
+        }
         break;
 
       case iana::icmp_type::parameter_problem:
@@ -205,16 +239,16 @@ icmp(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst)
     return count;
 }
 
-template <int N>
+template <int N, bool allow_recuse>
 std::size_t
-core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst)
+core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, bool_<allow_recuse> ar)
 {
     auto &ip = *b.data_as<ipv4::header>();
 
     switch (payload_protocol(ip))
     {
       case iana::protocol_number::icmp:
-        return icmp(iov, b, src, dst);
+        return icmp(iov, b, src, dst, ar);
     }
 
     translate_break("drop unsupported packet", false);
@@ -251,7 +285,7 @@ translate<ipv6>(wrap<raw> fwd, buffer_ref b) try
     auto srcv6 = make_embedded_address(source(ip), temporary_prefix(), temporary_plen());
     auto dstv6 = lookup(dest(ip));
 
-    const auto iov_cnt = core(iov_ip6, b, srcv6, dstv6);
+    const auto iov_cnt = core(iov_ip6, b, srcv6, dstv6, bool_<true>{});
 
     iovec iov[count] = {};
     for (std::size_t i = 0; i < count; ++i)

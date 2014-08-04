@@ -37,6 +37,34 @@ struct iov_ip
     std::size_t (&iov_len)  = len;
 };
 
+template <bool x>
+using bool_ = std::integral_constant<bool, x>;
+
+template <int N, bool allow_recuse>
+std::size_t
+core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, bool_<allow_recuse> ar);
+
+template <int D, int N>
+inline typename std::enable_if<(N > D), iov_ip(&)[N - D]>::type
+drop(iov_ip (&iov)[N])
+{
+    return *reinterpret_cast<iov_ip(*)[N - D]>(iov + D);
+}
+
+template <int N>
+inline std::size_t
+dispatch_core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, bool_<true>)
+{
+    return core(iov, b, src, dst, bool_<false>{});
+}
+
+template <int N>
+inline std::size_t
+dispatch_core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, bool_<false>)
+{
+    detail::throw_exception(translate_error("ICMPv6 error message containts ICMPv6 error message"));
+}
+
 void
 temporary_show_detail(const char *from, const char *to,
                       const ipv6::header &iphdr, const in_addr &src, const in_addr &dst)
@@ -54,9 +82,9 @@ temporary_show_detail(const char *from, const char *to,
         << std::endl;
 }
 
-template <int N>
+template <int N, bool allow_recuse>
 std::size_t
-icmp6(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst)
+icmp6(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, bool_<allow_recuse> ar)
 {
     auto &ip6   = *b.data_as<ipv6::header>();
     auto bip6   = b.next_to<ipv6::header>();
@@ -137,6 +165,13 @@ icmp6(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst)
         detail::throw_exception(translate_error("not implemented yet"));
         iov[1].icmp.type = static_cast<std::uint8_t>(iana::icmp_type::time_exceeded);
         iov[1].icmp.code = icmp6.icmp6_code;
+        {
+            auto b = bip6.next_to<ipv6::icmp6_header>();
+            auto &ip6 = *b.data_as<ipv6::header>();
+            auto srcv4 = extract_embedded_address(source(ip6), temporary_prefix(), temporary_plen());
+            auto dstv4 = lookup(dest(ip6));
+            count = count - 1 + dispatch_core(drop<2>(iov), b, srcv4, dstv4, ar);
+        }
 
       case iana::icmp6_type::parameter_problem:
         detail::throw_exception(translate_error("not implemented yet"));
@@ -168,16 +203,16 @@ icmp6(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst)
     return count;
 }
 
-template <int N>
+template <int N, bool allow_recuse>
 std::size_t
-core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst)
+core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, bool_<allow_recuse> ar)
 {
     auto &ip = *b.data_as<ipv6::header>();
 
     switch (payload_protocol(ip))
     {
       case iana::protocol_number::icmp6:
-        return icmp6(iov, b, src, dst);
+        return icmp6(iov, b, src, dst, ar);
     }
 
     translate_break("drop unsupported packet", false);
@@ -214,7 +249,7 @@ translate<ipv4>(wrap<raw> fwd, buffer_ref b) try
     auto srcv4 = lookup(source(ip6));
     auto dstv4 = extract_embedded_address(dest(ip6), temporary_prefix(), temporary_plen());
 
-    const auto iov_cnt = core(iov_ip, b, srcv4, dstv4);
+    const auto iov_cnt = core(iov_ip, b, srcv4, dstv4, bool_<true>{});
 
     iovec iov[count] = {};
     for (std::size_t i = 0; i < count; ++i)
