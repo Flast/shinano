@@ -108,6 +108,8 @@ icmp(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst)
       ((.ip6_dst  = dst))
     );
     iov[0].len = length(iov[0].ip6);
+
+    iov[1].icmp6.icmp6_data32[0] = icmp.un.gateway;
     iov[1].len = length(iov[1].icmp6);
 
     // for ip, icmp and icmp payload
