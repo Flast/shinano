@@ -7,6 +7,7 @@
 #define shinano_util_hpp_
 
 #include <string>
+#include <utility>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
@@ -63,6 +64,14 @@ extract_embedded_address(const in6_addr &embed, const in6_addr &prefix, std::siz
 
 in6_addr
 make_embedded_address(const in_addr &x, const in6_addr &prefix, std::size_t plen);
+
+
+template <int D, typename A, int N>
+inline constexpr typename std::enable_if<(N > D), A(&)[N - D]>::type
+drop(A (&a)[N]) noexcept
+{
+    return *reinterpret_cast<A(*)[N - D]>(a + D);
+}
 
 } // namespace shinano
 

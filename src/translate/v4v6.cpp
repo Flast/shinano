@@ -5,12 +5,12 @@
 
 #include <iostream>
 #include <cstdint>
-#include <utility>
 
 #include "config.hpp"
 #include "util.hpp"
 #include "detail/designated_initializer.hpp"
 #include "detail/exception.hpp"
+#include <boost/mpl/bool.hpp>
 
 #include "translate.hpp"
 #include "translate/address_table.hpp"
@@ -21,9 +21,6 @@
 namespace shinano {
 
 namespace {
-
-template <typename T>
-using wrap = std::reference_wrapper<T>;
 
 struct iov_ip6
 {
@@ -40,19 +37,12 @@ struct iov_ip6
     std::size_t (&iov_len)  = len;
 };
 
-template <bool x>
-using bool_ = std::integral_constant<bool, x>;
+using boost::mpl::bool_;
 
 template <int N, bool allow_recuse>
 std::size_t
 core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, bool_<allow_recuse> ar);
 
-template <int D, int N>
-inline typename std::enable_if<(N > D), iov_ip6(&)[N - D]>::type
-drop(iov_ip6 (&iov)[N])
-{
-    return *reinterpret_cast<iov_ip6(*)[N - D]>(iov + D);
-}
 
 template <int N>
 inline std::size_t
@@ -259,7 +249,7 @@ core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, 
 // v4 to v6
 template <>
 bool
-translate<ipv6>(wrap<raw> fwd, buffer_ref b) try
+translate<ipv6>(std::reference_wrapper<raw> fwd, buffer_ref b) try
 {
     auto &ip = *b.data_as<ipv4::header>();
 

@@ -19,9 +19,6 @@ namespace shinano {
 
 namespace {
 
-template <typename T>
-using wrap = std::reference_wrapper<T>;
-
 struct iov_ip
 {
     union
@@ -37,19 +34,12 @@ struct iov_ip
     std::size_t (&iov_len)  = len;
 };
 
-template <bool x>
-using bool_ = std::integral_constant<bool, x>;
+using boost::mpl::bool_;
 
 template <int N, bool allow_recuse>
 std::size_t
 core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, bool_<allow_recuse> ar);
 
-template <int D, int N>
-inline typename std::enable_if<(N > D), iov_ip(&)[N - D]>::type
-drop(iov_ip (&iov)[N])
-{
-    return *reinterpret_cast<iov_ip(*)[N - D]>(iov + D);
-}
 
 template <int N>
 inline std::size_t
@@ -223,7 +213,7 @@ core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, boo
 // v6 to v4
 template <>
 bool
-translate<ipv4>(wrap<raw> fwd, buffer_ref b) try
+translate<ipv4>(std::reference_wrapper<raw> fwd, buffer_ref b) try
 {
     auto &ip6 = *b.data_as<ipv6::header>();
 
