@@ -74,27 +74,11 @@ temporary_show_detail(const char *from, const char *to,
 
 template <int N, bool allow_recuse>
 std::size_t
-icmp6(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, bool_<allow_recuse> ar)
+icmp6(iov_ip (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
 {
     auto &ip6   = *b.data_as<ipv6::header>();
     auto bip6   = b.next_to<ipv6::header>();
     auto &icmp6 = *bip6.data_as<ipv6::icmp6_header>();
-
-    iov[0].ip = designated((ipv4::header)) by
-    (
-      ((.ip_v   = 4))
-      ((.ip_hl  = sizeof(ipv4::header) / 4)) // have no option
-      //((.ip_tos = <<unspecified>>))
-      //((.ip_len = <<TBD>>)) // kernel fill this field iff 0
-      //((.ip_id  = <<unspecified>>)) // kernel fill this field iff 0
-      ((.ip_off = 0)) // fragment is not supported currently
-      ((.ip_ttl = ip6.ip6_hlim))
-      ((.ip_p   = static_cast<std::uint8_t>(iana::protocol_number::icmp)))
-      //((.ip_sum = <<unspecified>>)) // kernel always calc checksum
-      ((.ip_src = src))
-      ((.ip_dst = dst))
-    );
-    iov[0].len = length(iov[0].ip);
 
     iov[1].icmp.un.gateway = icmp6.icmp6_data32[0];
     iov[1].len = length(iov[1].icmp);
@@ -197,12 +181,28 @@ template <int N, bool allow_recuse>
 std::size_t
 core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, bool_<allow_recuse> ar)
 {
-    auto &ip = *b.data_as<ipv6::header>();
+    auto &ip6 = *b.data_as<ipv6::header>();
 
-    switch (payload_protocol(ip))
+    iov[0].ip = designated((ipv4::header)) by
+    (
+      ((.ip_v   = 4))
+      ((.ip_hl  = sizeof(ipv4::header) / 4)) // have no option
+      //((.ip_tos = <<unspecified>>))
+      //((.ip_len = <<TBD>>)) // kernel fill this field iff 0
+      //((.ip_id  = <<unspecified>>)) // kernel fill this field iff 0
+      ((.ip_off = 0)) // fragment is not supported currently
+      ((.ip_ttl = ip6.ip6_hlim))
+      ((.ip_p   = static_cast<std::uint8_t>(iana::protocol_number::icmp)))
+      //((.ip_sum = <<unspecified>>)) // kernel always calc checksum
+      ((.ip_src = src))
+      ((.ip_dst = dst))
+    );
+    iov[0].len = length(iov[0].ip);
+
+    switch (payload_protocol(ip6))
     {
       case iana::protocol_number::icmp6:
-        return icmp6(iov, b, src, dst, ar);
+        return icmp6(iov, b, ar);
     }
 
     translate_break("drop unsupported packet", false);

@@ -109,23 +109,11 @@ finalize_icmp6(iov_ip6 (&iov)[N]) noexcept
 
 template <int N, bool allow_recuse>
 std::size_t
-icmp(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, bool_<allow_recuse> ar)
+icmp(iov_ip6 (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
 {
     auto &ip   = *b.data_as<ipv4::header>();
     auto bip   = b.next_to<ipv4::header>();
     auto &icmp = *bip.data_as<ipv4::icmp_header>();
-
-    iov[0].ip6 = designated((ipv6::header)) by
-    (
-      ((.ip6_vfc  = (6 << 4)))
-      //((.ip6_flow = <<unspecified>>))
-      //((.ip6_plen = <<TBD>>)) // kernel doesn't calc this field unlike ipv4.
-      ((.ip6_nxt  = static_cast<std::uint8_t>(iana::protocol_number::icmp6)))
-      ((.ip6_hlim = ip.ip_ttl))
-      ((.ip6_src  = src))
-      ((.ip6_dst  = dst))
-    );
-    iov[0].len = length(iov[0].ip6);
 
     iov[1].icmp6.icmp6_data32[0] = icmp.un.gateway;
     iov[1].len = length(iov[1].icmp6);
@@ -235,10 +223,22 @@ core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, 
 {
     auto &ip = *b.data_as<ipv4::header>();
 
+    iov[0].ip6 = designated((ipv6::header)) by
+    (
+      ((.ip6_vfc  = (6 << 4)))
+      //((.ip6_flow = <<unspecified>>))
+      //((.ip6_plen = <<TBD>>)) // kernel doesn't calc this field unlike ipv4.
+      ((.ip6_nxt  = static_cast<std::uint8_t>(iana::protocol_number::icmp6)))
+      ((.ip6_hlim = ip.ip_ttl))
+      ((.ip6_src  = src))
+      ((.ip6_dst  = dst))
+    );
+    iov[0].len = length(iov[0].ip6);
+
     switch (payload_protocol(ip))
     {
       case iana::protocol_number::icmp:
-        return icmp(iov, b, src, dst, ar);
+        return icmp(iov, b, ar);
     }
 
     translate_break("drop unsupported packet", false);
