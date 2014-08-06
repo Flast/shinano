@@ -26,6 +26,8 @@ struct iov_ip
         int _;
         ipv4::header      ip;
         ipv4::icmp_header icmp;
+        tag::tcp::header   tcp;
+        tag::udp::header   udp;
     };
     void *      base = &ip;
     std::size_t len  = 0;
@@ -171,9 +173,36 @@ icmp6(iov_ip (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
         detail::throw_exception(translate_error("unknown ICMPv6 type"));
     }
 
-    iov[1].icmp.checksum = ~detail::i_ccs<1>(iov);
+    checksum_field(iov[1].icmp) = ~detail::i_ccs<1>(iov);
 
     return count;
+}
+
+template <typename Tag, int N>
+std::size_t
+generic(iov_ip (&iov)[N], buffer_ref b)
+{
+    auto bip6  = b.next_to<ipv6::header>();
+
+    iov[1].base = bip6.data();
+    iov[1].len  = bip6.size();
+    checksum_field<Tag>(iov[1].base) = 0;
+
+    const auto ph = designated((ipv4::pseudo_header)) by
+    (
+      ((.pip_src   = iov[0].ip.ip_src))
+      ((.pip_dst   = iov[0].ip.ip_dst))
+      ((.pip_proto = iov[0].ip.ip_p))
+      ((.pip_len   = host_to_net<std::uint16_t>(iov[1].len)))
+    );
+
+    iovec piov[2];
+    piov[0].iov_base = const_cast<void *>(static_cast<const void *>(&ph));
+    piov[0].iov_len  = sizeof(ph);
+    piov[1].iov_base = iov[1].iov_base;
+    piov[1].iov_len  = iov[1].iov_len;
+
+    checksum_field<Tag>(iov[1].base) = ~detail::i_ccs(piov);
 }
 
 template <int N, bool allow_recuse>
@@ -191,7 +220,7 @@ core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, boo
       //((.ip_id  = <<unspecified>>)) // kernel fill this field iff 0
       ((.ip_off = 0)) // fragment is not supported currently
       ((.ip_ttl = ip6.ip6_hlim))
-      ((.ip_p   = static_cast<std::uint8_t>(iana::protocol_number::icmp)))
+      ((.ip_p   = ip6.ip6_nxt))
       //((.ip_sum = <<unspecified>>)) // kernel always calc checksum
       ((.ip_src = src))
       ((.ip_dst = dst))
@@ -202,8 +231,20 @@ core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, boo
     switch (payload_protocol(ip6))
     {
       case iana::protocol_number::icmp6:
+        // Adjust next-header field for ICMP
+        iov[0].ip.ip_p = static_cast<std::uint8_t>(iana::protocol_number::icmp);
         ret = icmp6(iov, b, ar);
         temporary_show_detail("icmp6", "icmp", ip6, src, dst);
+        break;
+
+      case iana::protocol_number::tcp:
+        ret = generic<tag::tcp>(iov, b);
+        temporary_show_detail("tcp over ipv6", "tcp over ip", ip6, src, dst);
+        break;
+
+      case iana::protocol_number::udp:
+        ret = generic<tag::udp>(iov, b);
+        temporary_show_detail("udp over ipv6", "udp over ip", ip6, src, dst);
         break;
 
       default:

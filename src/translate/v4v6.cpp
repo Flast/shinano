@@ -29,6 +29,8 @@ struct iov_ip6
         int _;
         ipv6::header       ip6;
         ipv6::icmp6_header icmp6;
+        tag::tcp::header   tcp;
+        tag::udp::header   udp;
     };
     void *      base = &ip6;
     std::size_t len  = 0;
@@ -75,9 +77,9 @@ temporary_show_detail(const char *from, const char *to,
         << std::endl;
 }
 
-template <int N>
+template <typename Tag, int N>
 void
-finalize_icmp6(iov_ip6 (&iov)[N]) noexcept
+finalize_ip6(iov_ip6 (&iov)[N]) noexcept
 {
     using boost::adaptors::dropped;
     const std::uint16_t plen = boost::accumulate(iov | dropped(1), 0,
@@ -104,7 +106,7 @@ finalize_icmp6(iov_ip6 (&iov)[N]) noexcept
         piov[i].iov_len  = iov[i].iov_len;
     }
 
-    iov[1].icmp6.icmp6_cksum = ~detail::i_ccs(piov);
+    checksum_field<Tag>(iov[1].base) = ~detail::i_ccs(piov);
 }
 
 template <int N, bool allow_recuse>
@@ -211,9 +213,22 @@ icmp(iov_ip6 (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
         detail::throw_exception(translate_error("unknown ICMP type"));
     }
 
-    finalize_icmp6(iov);
+    finalize_ip6<tag::icmp6>(iov);
 
     return count;
+}
+
+template <typename Tag, int N>
+std::size_t
+generic(iov_ip6 (&iov)[N], buffer_ref b)
+{
+    auto bip = b.next_to<ipv4::header>();
+
+    iov[1].base = bip.data();
+    iov[1].len  = bip.size();
+    checksum_field<Tag>(iov[1].base) = 0;
+
+    finalize_ip6<Tag>(iov);
 }
 
 template <int N, bool allow_recuse>
@@ -227,7 +242,7 @@ core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, 
       ((.ip6_vfc  = (6 << 4)))
       //((.ip6_flow = <<unspecified>>))
       //((.ip6_plen = <<TBD>>)) // kernel doesn't calc this field unlike ipv4.
-      ((.ip6_nxt  = static_cast<std::uint8_t>(iana::protocol_number::icmp6)))
+      ((.ip6_nxt  = ip.ip_p))
       ((.ip6_hlim = ip.ip_ttl))
       ((.ip6_src  = src))
       ((.ip6_dst  = dst))
@@ -238,8 +253,20 @@ core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, 
     switch (payload_protocol(ip))
     {
       case iana::protocol_number::icmp:
+        // Adjust next-header field for ICMPv6
+        iov[0].ip6.ip6_nxt = static_cast<std::uint8_t>(iana::protocol_number::icmp6);
         ret = icmp(iov, b, ar);
         temporary_show_detail("icmp", "icmp6", ip, src, dst);
+        break;
+
+      case iana::protocol_number::tcp:
+        ret = generic<tag::tcp>(iov, b);
+        temporary_show_detail("tcp over ip", "tcp over ipv6", ip, src, dst);
+        break;
+
+      case iana::protocol_number::udp:
+        ret = generic<tag::udp>(iov, b);
+        temporary_show_detail("udp over ip", "udp over ipv6", ip, src, dst);
         break;
 
       default:

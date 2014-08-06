@@ -11,6 +11,8 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
 
 #include "config.hpp"
 
@@ -57,6 +59,38 @@ payload_protocol(const ip &hdr) noexcept
 inline constexpr iana::protocol_number
 payload_protocol(const ip6_hdr &hdr) noexcept
 { return static_cast<iana::protocol_number>(hdr.ip6_nxt); }
+
+
+inline constexpr std::uint16_t &
+checksum_field(ipv4::icmp_header &h) noexcept
+{
+    return h.checksum;
+}
+
+inline constexpr std::uint16_t &
+checksum_field(ipv6::icmp6_header &h) noexcept
+{
+    return h.icmp6_cksum;
+}
+
+inline constexpr std::uint16_t &
+checksum_field(udphdr &h) noexcept
+{
+    return h.check;
+}
+
+inline constexpr std::uint16_t &
+checksum_field(tcphdr &h) noexcept
+{
+    return h.check;
+}
+
+template <typename Tag, typename T>
+inline constexpr std::uint16_t &
+checksum_field(T *h) noexcept
+{
+    return checksum_field(*reinterpret_cast<typename Tag::header *>(h));
+}
 
 
 in_addr

@@ -16,6 +16,8 @@
 #include <netinet/ip_icmp.h>
 #include <netinet/ip6.h>
 #include <netinet/icmp6.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
 
 #include "config/iana.hpp"
 
@@ -63,6 +65,15 @@ typedef icmphdr icmp_header;
 
 typedef sockaddr_in sockaddr;
 
+struct pseudo_header
+{
+    in_addr       pip_src;
+    in_addr       pip_dst;
+    std::uint8_t  _pip_padding;
+    std::uint8_t  pip_proto;
+    std::uint16_t pip_len;
+};
+
 }; // pseudo-namespace shinano::ipv4
 
 
@@ -86,6 +97,15 @@ struct pseudo_header
 typedef sockaddr_in6 sockaddr;
 
 }; // pseudo-namespace shinano::ipv6
+
+namespace tag {
+
+struct icmp  { typedef icmphdr   header; };
+struct icmp6 { typedef icmp6_hdr header; };
+struct tcp   { typedef tcphdr    header; };
+struct udp   { typedef udphdr    header; };
+
+} // namespace shinano:;tag
 
 } // namespace shinano
 
