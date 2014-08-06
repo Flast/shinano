@@ -212,7 +212,6 @@ icmp(iov_ip6 (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
     }
 
     finalize_icmp6(iov);
-    temporary_show_detail("icmp", "icmp6", ip, src, dst);
 
     return count;
 }
@@ -235,13 +234,19 @@ core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, 
     );
     iov[0].len = length(iov[0].ip6);
 
+    std::size_t ret = 0;
     switch (payload_protocol(ip))
     {
       case iana::protocol_number::icmp:
-        return icmp(iov, b, ar);
+        ret = icmp(iov, b, ar);
+        temporary_show_detail("icmp", "icmp6", ip, src, dst);
+        break;
+
+      default:
+        translate_break("drop unsupported packet", false);
     }
 
-    translate_break("drop unsupported packet", false);
+    return ret;
 }
 
 } // shinano::<anonymous-namespace>
