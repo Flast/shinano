@@ -29,28 +29,54 @@ enum class protocol_number : std::uint8_t
     ipv6_opts  = 60,
 };
 
-// http://tools.ietf.org/html/rfc792
 namespace icmp {
 
 // ICMP message type
+//    http://tools.ietf.org/html/rfc792
+//  * http://tools.ietf.org/html/rfc950
+//  + http://tools.ietf.org/html/rfc1256
+//  X http://tools.ietf.org/html/rfc1393
+// ** http://tools.ietf.org/html/rfc1475
+// ++ http://tools.ietf.org/html/rfc1700
+// XX http://tools.ietf.org/html/rfc1788
 enum class type : std::uint8_t
 {
+    echo_reply = 0,
+
+    // unassigned = 1
+    // unassigned = 2
+
     destination_unreachable = 3,
-    time_exceeded = 11,
-    parameter_problem = 12,
     source_quench = 4,
     redirect = 5,
 
-    echo_request = 8,
-    echo_reply = 0,
+    alternate_host_address = 6,     // XX
+    // unassigned = 7,
 
+    echo_request = 8,
+
+    router_advertisement = 9,       // +
+    router_solicitation = 10,       // +
+
+    time_exceeded = 11,
+    parameter_problem = 12,
     timestamp_request = 13,
     timestamp_reply = 14,
-
     information_request = 15,
     information_reply = 16,
+
+    address_mask_request = 17,      // *
+    address_mask_reply = 18,        // *
+
+    traceroute = 30,                // X
+
+    datagram_conversion_error = 31, // **
+
+    domain_name_request = 37,       // XX
+    domain_name_reply = 38,         // XX
 };
 
+// ++ http://tools.ietf.org/html/rfc1700
 enum class destination_unreachable : std::uint8_t
 {
     net = 0,
@@ -60,17 +86,13 @@ enum class destination_unreachable : std::uint8_t
     fragmentation_needed = 4,
     dont_fragment = fragmentation_needed,
     source_route_failed = 5,
-};
-
-enum class time_exceeded : std::uint8_t
-{
-    ttl_exceeded = 0,
-    fragment_reassembly = 1,
-};
-
-enum class parameter_problem : std::uint8_t
-{
-    pointer_indicates = 0,
+    network_unknown = 6,                // ++
+    host_unknown = 7,                   // ++
+    source_host_isolated = 8,           // ++
+    network_is_a14y_prohibited = 9,     // ++
+    host_is_a14y_prohibited = 10,       // ++
+    network_unreachable_for_tos = 11,   // ++
+    host_unreachable_for_tos = 12,      // ++
 };
 
 enum class redirect : std::uint8_t
@@ -79,6 +101,22 @@ enum class redirect : std::uint8_t
     for_host = 1,
     tos_and_for_network = 2,
     tos_and_for_host = 3,
+};
+
+enum class time_exceeded : std::uint8_t
+{
+    ttl_exceeded = 0,
+    fragment_reassembly = 1,
+};
+
+//    http://tools.ietf.org/html/rfc792
+//  * http://tools.ietf.org/html/rfc1108
+// ++ http://tools.ietf.org/html/rfc1700
+enum class parameter_problem : std::uint8_t
+{
+    pointer_indicates = 0,
+    missing_required_option = 1,        // *
+    bad_length = 2,                     // ++
 };
 
 } // namespace iana::icmp

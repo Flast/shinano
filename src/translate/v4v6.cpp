@@ -139,12 +139,6 @@ icmp(iov_ip6 (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
         iov[2].len              = plength(ip) - iov[1].len;
         break;
 
-      case iana::icmp_type::timestamp_request:
-      case iana::icmp_type::timestamp_reply:
-      case iana::icmp_type::information_request:
-      case iana::icmp_type::information_reply:
-        translate_break("silently dropped: obsoleted in icmp6");
-
       case iana::icmp_type::destination_unreachable:
         using iana::icmp6::destination_unreachable;
         iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::destination_unreachable);
@@ -154,6 +148,11 @@ icmp(iov_ip6 (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
           case iana::icmp::destination_unreachable::net:
           case iana::icmp::destination_unreachable::host:
           case iana::icmp::destination_unreachable::source_route_failed:
+          case iana::icmp::destination_unreachable::network_unknown:
+          case iana::icmp::destination_unreachable::host_unknown:
+          case iana::icmp::destination_unreachable::source_host_isolated:
+          case iana::icmp::destination_unreachable::network_unreachable_for_tos:
+          case iana::icmp::destination_unreachable::host_unreachable_for_tos:
             detail::throw_exception(translate_error("not implemented yet"));
             iov[1].icmp6.icmp6_code = static_cast<std::uint8_t>(destination_unreachable::no_route_to_destination);
 
@@ -171,15 +170,26 @@ icmp(iov_ip6 (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
             iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::packet_too_big);
             iov[1].icmp6.icmp6_code = 0;
 
+          case iana::icmp::destination_unreachable::network_is_a14y_prohibited:
+          case iana::icmp::destination_unreachable::host_is_a14y_prohibited:
+            detail::throw_exception(translate_error("not implemented yet"));
+            iov[1].icmp6.icmp6_code = static_cast<std::uint8_t>(destination_unreachable::administratively_prohibited);
+
+          // NOTE: Quote from RFC6145
+          //  Code 13 (Communication Administratively Prohibited):  Set
+          //     the Code to 1 (Communication with destination
+          //     administratively prohibited).
+          //
+          //  Code 14 (Host Precedence Violation):  Silently drop.
+          //
+          //  Code 15 (Precedence cutoff in effect):  Set the Code to 1
+          //     (Communication with destination administratively
+          //     prohibited).
+
           default:
             detail::throw_exception(translate_error("unknown ICMP code"));
         };
         break;
-
-      case iana::icmp_type::redirect:
-        translate_break("silently dropped");
-      case iana::icmp_type::source_quench:
-        translate_break("silently dropped: obsoleted in icmp6");
 
       case iana::icmp_type::time_exceeded:
         iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::time_exceeded);
@@ -200,6 +210,43 @@ icmp(iov_ip6 (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
         switch (static_cast<iana::icmp::parameter_problem>(icmp.code))
         {
           case iana::icmp::parameter_problem::pointer_indicates:
+          case iana::icmp::parameter_problem::bad_length:
+            detail::throw_exception(translate_error("not implemented yet"));
+            iov[1].icmp6.icmp6_code = static_cast<std::uint8_t>(iana::icmp6::parameter_problem::header_field);
+          // NOTE: Quote from RFC6145
+          // Code 0 (Pointer indicates the error):  Set the Code to 0
+          //    (Erroneous header field encountered) and update the
+          //    pointer as defined in Figure 3.  (If the Original IPv4
+          //    Pointer Value is not listed or the Translated IPv6
+          //    Pointer Value is listed as "n/a", silently drop the
+          //    packet.)
+          // Code 2 (Bad length):  Set the Code to 0 (Erroneous header
+          //    field encountered) and update the pointer as defined in
+          //    Figure 3.  (If the Original IPv4 Pointer Value is not
+          //    listed or the Translated IPv6 Pointer Value is listed as
+          //    "n/a", silently drop the packet.)
+          //
+          //    +--------------------------------+--------------------------------+
+          //    |   Original IPv4 Pointer Value  | Translated IPv6 Pointer Value  |
+          //    +--------------------------------+--------------------------------+
+          //    |  0  | Version/IHL              |  0  | Version/Traffic Class    |
+          //    |  1  | Type Of Service          |  1  | Traffic Class/Flow Label |
+          //    | 2,3 | Total Length             |  4  | Payload Length           |
+          //    | 4,5 | Identification           | n/a |                          |
+          //    |  6  | Flags/Fragment Offset    | n/a |                          |
+          //    |  7  | Fragment Offset          | n/a |                          |
+          //    |  8  | Time to Live             |  7  | Hop Limit                |
+          //    |  9  | Protocol                 |  6  | Next Header              |
+          //    |10,11| Header Checksum          | n/a |                          |
+          //    |12-15| Source Address           |  8  | Source Address           |
+          //    |16-19| Destination Address      | 24  | Destination Address      |
+          //    +--------------------------------+--------------------------------+
+          //
+          //            Figure 3: Pointer Value for Translating from IPv4 to IPv6
+
+          case iana::icmp::parameter_problem::missing_required_option:
+            translate_break("silently dropped: parameter problem (missing a required option)");
+
             detail::throw_exception(translate_error("not implemented yet"));
             iov[1].icmp6.icmp6_code = static_cast<std::uint8_t>(iana::icmp6::parameter_problem::header_field);
 
@@ -207,6 +254,39 @@ icmp(iov_ip6 (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
             detail::throw_exception(translate_error("unknown ICMP code"));
         }
         break;
+
+      case iana::icmp_type::timestamp_request:
+      case iana::icmp_type::timestamp_reply:
+        translate_break("silently dropped: timestamp message is obsoleted in icmp6");
+
+      case iana::icmp_type::information_request:
+      case iana::icmp_type::information_reply:
+        translate_break("silently dropped: information message is obsoleted in icmp6");
+
+      case iana::icmp_type::redirect:
+        translate_break("silently dropped: redirect is single hop message");
+      case iana::icmp_type::source_quench:
+        translate_break("silently dropped: source quench is obsoleted in icmp6");
+
+      case iana::icmp_type::router_advertisement:
+      case iana::icmp_type::router_solicitation:
+        translate_break("silently dropped: RA and RS are single hop message");
+
+      case iana::icmp_type::address_mask_request:
+      case iana::icmp_type::address_mask_reply:
+        translate_break("silently dropped: address mask message is obsoleted in icmp6");
+
+      case iana::icmp_type::traceroute:
+        translate_break("silently dropped: traceroute message is unspecified in RFC6145");
+      case iana::icmp_type::datagram_conversion_error:
+        translate_break("silently dropped: datagram conversion error is unspecified in RFC6145");
+
+      case iana::icmp_type::domain_name_request:
+      case iana::icmp_type::domain_name_reply:
+        translate_break("silently dropped: domain name message is unspecified in RFC6145");
+
+      case iana::icmp_type::alternate_host_address:
+        translate_break("silently dropped: alternate host address");
 
       // others; silently drop
       default:
