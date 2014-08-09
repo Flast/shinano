@@ -76,6 +76,17 @@ temporary_show_detail(const char *from, const char *to,
 
 template <int N, bool allow_recuse>
 std::size_t
+reassemble_icmp6_error_body(iov_ip (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
+{
+    auto be6 = b.next_to<ipv6::icmp6_header>();
+    auto &ip6 = *be6.data_as<ipv6::header>();
+    auto srcv4 = extract_embedded_address(source(ip6), temporary_prefix(), temporary_plen());
+    auto dstv4 = lookup(dest(ip6));
+    return dispatch_core(iov, be6, srcv4, dstv4, ar);
+}
+
+template <int N, bool allow_recuse>
+std::size_t
 icmp6(iov_ip (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
 {
     auto &ip6   = *b.data_as<ipv6::header>();
@@ -117,15 +128,19 @@ icmp6(iov_ip (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
           case iana::icmp6::destination_unreachable::no_route_to_destination:
           case iana::icmp6::destination_unreachable::beyond_scope_of_source:
           case iana::icmp6::destination_unreachable::address:
-            detail::throw_exception(translate_error("not implemented yet"));
             iov[1].icmp.code = static_cast<std::uint8_t>(destination_unreachable::host);
+            count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, ar);
+            break;
 
           case iana::icmp6::destination_unreachable::administratively_prohibited:
-            detail::throw_exception(translate_error("not implemented yet"));
+            iov[1].icmp.code = static_cast<std::uint8_t>(destination_unreachable::host_is_a14y_prohibited);
+            count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, ar);
+            break;
 
           case iana::icmp6::destination_unreachable::port:
-            detail::throw_exception(translate_error("not implemented yet"));
             iov[1].icmp.code = static_cast<std::uint8_t>(destination_unreachable::port);
+            count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, ar);
+            break;
 
           default:
             detail::throw_exception(translate_error("unknown ICMPv6 code"));
@@ -133,24 +148,18 @@ icmp6(iov_ip (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
         break;
 
       case iana::icmp6_type::packet_too_big:
-        detail::throw_exception(translate_error("not implemented yet"));
         iov[1].icmp.type = static_cast<std::uint8_t>(iana::icmp_type::destination_unreachable);
         iov[1].icmp.code = static_cast<std::uint8_t>(iana::icmp::destination_unreachable::fragmentation_needed);
+        count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, ar);
+        break;
 
       case iana::icmp6_type::time_exceeded:
-        detail::throw_exception(translate_error("not implemented yet"));
         iov[1].icmp.type = static_cast<std::uint8_t>(iana::icmp_type::time_exceeded);
         iov[1].icmp.code = icmp6.icmp6_code;
-        {
-            auto b = bip6.next_to<ipv6::icmp6_header>();
-            auto &ip6 = *b.data_as<ipv6::header>();
-            auto srcv4 = extract_embedded_address(source(ip6), temporary_prefix(), temporary_plen());
-            auto dstv4 = lookup(dest(ip6));
-            count = count - 1 + dispatch_core(drop<2>(iov), b, srcv4, dstv4, ar);
-        }
+        count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, ar);
+        break;
 
       case iana::icmp6_type::parameter_problem:
-        detail::throw_exception(translate_error("not implemented yet"));
         iov[1].icmp.type = static_cast<std::uint8_t>(iana::icmp_type::parameter_problem);
 
         switch (static_cast<iana::icmp6::parameter_problem>(icmp6.icmp6_code))
@@ -158,10 +167,35 @@ icmp6(iov_ip (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
           case iana::icmp6::parameter_problem::header_field:
             detail::throw_exception(translate_error("not implemented yet"));
             iov[1].icmp.code = static_cast<std::uint8_t>(iana::icmp::parameter_problem::pointer_indicates);
+          // NOTE: Quote from RFC6145
+          // Code 0 (Erroneous header field encountered):  Set to Type 12,
+          //    Code 0, and update the pointer as defined in Figure 6.  (If
+          //    the Original IPv6 Pointer Value is not listed or the
+          //    Translated IPv4 Pointer Value is listed as "n/a", silently
+          //    drop the packet.)
+          //
+          //    +--------------------------------+--------------------------------+
+          //    |   Original IPv6 Pointer Value  | Translated IPv4 Pointer Value  |
+          //    +--------------------------------+--------------------------------+
+          //    |  0  | Version/Traffic Class    |  0  | Version/IHL, Type Of Ser |
+          //    |  1  | Traffic Class/Flow Label |  1  | Type Of Service          |
+          //    | 2,3 | Flow Label               | n/a |                          |
+          //    | 4,5 | Payload Length           |  2  | Total Length             |
+          //    |  6  | Next Header              |  9  | Protocol                 |
+          //    |  7  | Hop Limit                |  8  | Time to Live             |
+          //    | 8-23| Source Address           | 12  | Source Address           |
+          //    |24-39| Destination Address      | 16  | Destination Address      |
+          //    +--------------------------------+--------------------------------+
+          //
+          //            Figure 6: Pointer Value for Translating from IPv6 to IPv4
 
           case iana::icmp6::parameter_problem::next_header:
-            detail::throw_exception(translate_error("not implemented yet"));
             iov[1].icmp.code = static_cast<std::uint8_t>(iana::icmp::destination_unreachable::protocol);
+            count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, ar);
+            break;
+
+          case iana::icmp6::parameter_problem::option:
+            translate_break("silently dropped: unrecognized IPv6 option encountered");
 
           default:
             detail::throw_exception(translate_error("unknown ICMPv6 code"));

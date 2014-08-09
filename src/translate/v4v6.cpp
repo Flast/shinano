@@ -110,6 +110,17 @@ finalize_ip6(iov_ip6 (&iov)[N]) noexcept
 }
 
 template <int N, bool allow_recuse>
+inline std::size_t
+reassemble_icmp_error_body(iov_ip6 (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
+{
+    auto be = b.next_to<ipv4::icmp_header>();
+    auto &ip = *be.data_as<ipv4::header>();
+    auto srcv6 = lookup(source(ip));
+    auto dstv6 = make_embedded_address(dest(ip), temporary_prefix(), temporary_plen());
+    return dispatch_core(iov, be, srcv6, dstv6, ar);
+}
+
+template <int N, bool allow_recuse>
 std::size_t
 icmp(iov_ip6 (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
 {
@@ -153,27 +164,32 @@ icmp(iov_ip6 (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
           case iana::icmp::destination_unreachable::source_host_isolated:
           case iana::icmp::destination_unreachable::network_unreachable_for_tos:
           case iana::icmp::destination_unreachable::host_unreachable_for_tos:
-            detail::throw_exception(translate_error("not implemented yet"));
             iov[1].icmp6.icmp6_code = static_cast<std::uint8_t>(destination_unreachable::no_route_to_destination);
+            count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, ar);
+            break;
 
           case iana::icmp::destination_unreachable::protocol:
-            detail::throw_exception(translate_error("unsupported ICMP type/code"));
             iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::parameter_problem);
             iov[1].icmp6.icmp6_code = static_cast<std::uint8_t>(iana::icmp6::parameter_problem::header_field);
+            count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, ar);
+            break;
 
           case iana::icmp::destination_unreachable::port:
-            detail::throw_exception(translate_error("unsupported ICMP type/code"));
             iov[1].icmp6.icmp6_code = static_cast<std::uint8_t>(destination_unreachable::port);
+            count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, ar);
+            break;
 
           case iana::icmp::destination_unreachable::dont_fragment:
-            detail::throw_exception(translate_error("not implemented yet"));
             iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::packet_too_big);
             iov[1].icmp6.icmp6_code = 0;
+            count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, ar);
+            break;
 
           case iana::icmp::destination_unreachable::network_is_a14y_prohibited:
           case iana::icmp::destination_unreachable::host_is_a14y_prohibited:
-            detail::throw_exception(translate_error("not implemented yet"));
             iov[1].icmp6.icmp6_code = static_cast<std::uint8_t>(destination_unreachable::administratively_prohibited);
+            count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, ar);
+            break;
 
           // NOTE: Quote from RFC6145
           //  Code 13 (Communication Administratively Prohibited):  Set
@@ -194,17 +210,10 @@ icmp(iov_ip6 (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
       case iana::icmp_type::time_exceeded:
         iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::time_exceeded);
         iov[1].icmp6.icmp6_code = icmp.code;
-        {
-            auto b = bip.next_to<ipv4::icmp_header>();
-            auto &ip = *b.data_as<ipv4::header>();
-            auto srcv6 = lookup(source(ip));
-            auto dstv6 = make_embedded_address(dest(ip), temporary_prefix(), temporary_plen());
-            count = count - 1 + dispatch_core(drop<2>(iov), b, srcv6, dstv6, ar);
-        }
+        count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, ar);
         break;
 
       case iana::icmp_type::parameter_problem:
-        detail::throw_exception(translate_error("not implemented yet"));
         iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::parameter_problem);
 
         switch (static_cast<iana::icmp::parameter_problem>(icmp.code))
@@ -246,9 +255,6 @@ icmp(iov_ip6 (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
 
           case iana::icmp::parameter_problem::missing_required_option:
             translate_break("silently dropped: parameter problem (missing a required option)");
-
-            detail::throw_exception(translate_error("not implemented yet"));
-            iov[1].icmp6.icmp6_code = static_cast<std::uint8_t>(iana::icmp6::parameter_problem::header_field);
 
           default:
             detail::throw_exception(translate_error("unknown ICMP code"));
