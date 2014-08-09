@@ -4,12 +4,9 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <iostream>
-#include <iomanip>
 #include <boost/exception/diagnostic_information.hpp>
-
-#include <functional>
-
 #include "detail/exception.hpp"
+
 #include "detail/dump.hpp"
 
 #include "config.hpp"
@@ -24,30 +21,37 @@ do_work(tuntap is, raw os4, raw os6)
 
     while (true)
     {
-        if (is.read(buffer) < 0) { throw_with_errno(); }
+        auto bref = [&]() -> buffer_ref
+        {
+            const auto len = is.read(buffer);
+            if (len < 0) { throw_with_errno(); }
+            return make_buffer_ref(buffer, len);
+        }();
 
-        switch (buffer.internet_protocol())
+        switch (*bref.data_as<ieee::protocol_number>(2))
         {
           case ieee::protocol_number::ip:
             // v4 to v6
-            if (translate<ipv6>(os6, buffer)) { continue; }
+            if (translate<ipv6>(os6, bref.next_to(4))) { continue; }
             break;
 
           case ieee::protocol_number::ipv6:
             // v6 to v4
-            if (translate<ipv4>(os4, buffer)) { continue; }
+            if (translate<ipv4>(os4, bref.next_to(4))) { continue; }
             break;
         }
         std::cout
           << "warning: unknown internet layer protocol"
-          << " (in " << buffer.size() << " bytes)"
+          << " (in " << bref.size() << " bytes)"
           << std::endl;
-        debug::dump(std::cout, buffer);
+        debug::dump(std::cout, bref);
     }
 }
 
 int main(int argc, char **argv) try
 {
+    temporary_table_init();
+
     auto is = make_tuntap<tuntap::tun_tag>(argv[1]);
     is.up();
 

@@ -14,104 +14,70 @@
 #include <array>
 
 #include "config.hpp"
+#include "util.hpp"
 #include "socket.hpp"
-
-#include <boost/assert.hpp>
 
 namespace shinano {
 
-template <std::size_t maxcap>
-struct buffer
+struct buffer_ref
 {
-    using size_type = std::size_t;
+    using value_type     = std::uint8_t;
+    using       pointer  =       value_type *;
+    using const_pointer  = const value_type *;
+    using       iterator =       pointer;
+    using const_iterator = const_pointer;
+    using size_type      = std::size_t;
 
-    constexpr size_type
-    capacity() noexcept { return internal_buffer.size(); }
+    pointer   ptr_;
+    size_type length_;
 
-    size_type
-    size() const noexcept { return length; }
+    size_type size() const noexcept { return length_; }
+    void resize(size_type newlen) noexcept { length_ = newlen; }
 
-    void
-    resize(size_type newlen) noexcept
-    {
-        BOOST_ASSERT(capacity() >= newlen);
-        length = newlen;
-    }
+          iterator begin()       noexcept { return ptr_; }
+    const_iterator begin() const noexcept { return ptr_; }
 
-    void *
-    data() noexcept { return internal_buffer.data(); }
-    const void *
-    data() const noexcept { return internal_buffer.data(); }
+          iterator end()       noexcept { return std::next(begin(), size()); }
+    const_iterator end() const noexcept { return std::next(begin(), size()); }
 
-private:
-    size_type length;
-    std::array<std::uint8_t, maxcap> internal_buffer;
+          void * data()       noexcept { return ptr_; }
+    const void * data() const noexcept { return ptr_; }
 
     template <typename T>
     T *
     data_as(size_type offset = 0) noexcept
     {
-        return static_cast<T *>(static_cast<void *>(
-            static_cast<char *>(data()) + offset));
+        return reinterpret_cast<T *>(
+            static_cast<char *>(data()) + offset);
     }
 
     template <typename T>
     const T *
     data_as(size_type offset = 0) const noexcept
     {
-        return static_cast<const T *>(static_cast<const void *>(
-            static_cast<const char *>(data()) + offset));
+        return reinterpret_cast<const T *>(
+            static_cast<const char *>(data()) + offset);
     }
 
-public:
-    auto
-    begin() noexcept
-      -> decltype(this->internal_buffer.begin())
-    { return internal_buffer.begin(); }
-
-    auto
-    begin() const noexcept
-      -> decltype(this->internal_buffer.begin())
-    { return internal_buffer.begin(); }
-
-    auto
-    end() noexcept
-      -> decltype(this->internal_buffer.begin())
+    buffer_ref
+    next_to(size_type skip) noexcept
     {
-        auto i = internal_buffer.begin();
-        std::advance(i, size());
-        return i;
+        return {data_as<value_type>(skip), size() - skip};
     }
 
-    auto
-    end() const noexcept
-      -> decltype(this->internal_buffer.begin())
-    {
-        auto i = internal_buffer.begin();
-        std::advance(i, size());
-        return i;
-    }
-
-    std::uint16_t
-    flags() const noexcept { return *data_as<std::uint16_t>(); }
-
-    ieee::protocol_number
-    internet_protocol() const noexcept { return *data_as<ieee::protocol_number>(2); }
-
-    template <typename protocol>
-    auto
-    internet_header() noexcept
-      -> decltype(this->data_as<typename protocol::header>())
-    { return data_as<typename protocol::header>(4); }
-
-    template <typename protocol>
-    auto
-    internet_header() const noexcept
-      -> decltype(this->data_as<typename protocol::header>())
-    { return data_as<typename protocol::header>(4); }
+    template <typename T>
+    buffer_ref
+    next_to() noexcept { return next_to(length(*data_as<T>())); }
 };
 
-using input_buffer = buffer<IP_MAXPACKET>;
+template <typename B>
+inline buffer_ref
+make_buffer_ref(B &b, std::size_t l) noexcept
+{
+    return {b.data(), l};
+}
+
+using input_buffer = std::array<std::uint8_t, IP_MAXPACKET>;
 
 
 struct translate_error : std::runtime_error
@@ -121,7 +87,42 @@ struct translate_error : std::runtime_error
 
 template <typename Target>
 bool
-translate(std::reference_wrapper<raw>, std::reference_wrapper<input_buffer>);
+translate(std::reference_wrapper<raw>, buffer_ref);
+
+struct translate_breaked : std::exception
+{
+    explicit
+    translate_breaked(std::string what, bool ret = true)
+      : _w(what), _ret(ret) { }
+
+    virtual const char *
+    what() const noexcept override
+    {
+        return _w.c_str();
+    }
+
+    bool
+    ret() const noexcept { return _ret; }
+
+private:
+    std::string _w;
+    bool        _ret;
+};
+
+template <typename... T>
+inline void
+translate_break(T &&... v)
+{
+    throw translate_breaked(std::forward<T>(v)...);
+}
+
+
+void
+temporary_table_init();
+const in6_addr &
+temporary_prefix() noexcept;
+std::size_t
+temporary_plen() noexcept;
 
 } // namespace shinano
 

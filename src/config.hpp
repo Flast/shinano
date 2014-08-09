@@ -11,8 +11,15 @@
 #include <chrono>
 #include <boost/predef/other/endian.h>
 
+#include <netinet/in.h>
 #include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
 #include <netinet/ip6.h>
+#include <netinet/icmp6.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+
+#include "config/iana.hpp"
 
 namespace shinano {
 
@@ -53,10 +60,19 @@ struct ipv4 { // pseudo-namespace
 
 static constexpr auto domain = AF_INET;
 
-typedef ip header;
-static constexpr auto header_length = sizeof(header);
+typedef ip      header;
+typedef icmphdr icmp_header;
 
 typedef sockaddr_in sockaddr;
+
+struct pseudo_header
+{
+    in_addr       pip_src;
+    in_addr       pip_dst;
+    std::uint8_t  _pip_padding;
+    std::uint8_t  pip_proto;
+    std::uint16_t pip_len;
+};
 
 }; // pseudo-namespace shinano::ipv4
 
@@ -66,12 +82,30 @@ struct ipv6 { // pseudo-namespace
 
 static constexpr auto domain = AF_INET6;
 
-typedef ip6_hdr header;
-static constexpr auto header_length = sizeof(header);
+typedef ip6_hdr   header;
+typedef icmp6_hdr icmp6_header;
+
+struct pseudo_header
+{
+    in6_addr      pip6_src;
+    in6_addr      pip6_dst;
+    std::uint32_t pip6_plen;
+    std::uint8_t  _pip6_padding[3];
+    std::uint8_t  pip6_nxt;
+};
 
 typedef sockaddr_in6 sockaddr;
 
 }; // pseudo-namespace shinano::ipv6
+
+namespace tag {
+
+struct icmp  { typedef icmphdr   header; };
+struct icmp6 { typedef icmp6_hdr header; };
+struct tcp   { typedef tcphdr    header; };
+struct udp   { typedef udphdr    header; };
+
+} // namespace shinano:;tag
 
 } // namespace shinano
 
@@ -84,28 +118,5 @@ enum class protocol_number : std::uint16_t
 };
 
 } // namespace ieee
-
-namespace iana {
-
-// http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml#protocol-numbers-1
-enum class protocol_number : std::uint8_t
-{
-    hopopt     = 0,
-    icmp       = 1,
-    igmp       = 2,
-    ipv4       = 4,
-    tcp        = 6,
-    udp        = 17,
-    dccp       = 33,
-    ipv6       = 41,
-    ipv6_route = 43,
-    ipv6_frag  = 44,
-    gre        = 47,
-    icmp6      = 58,
-    ipv6_nonxt = 59,
-    ipv6_opts  = 60,
-};
-
-} // namespace iana
 
 #endif
