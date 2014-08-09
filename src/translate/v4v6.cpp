@@ -309,6 +309,8 @@ generic(iov_ip6 (&iov)[N], buffer_ref b)
     checksum_field<Tag>(iov[1].base) = 0;
 
     finalize_ip6<Tag>(iov);
+
+    return 2;
 }
 
 template <int N, bool allow_recuse>

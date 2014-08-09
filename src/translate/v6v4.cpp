@@ -203,6 +203,8 @@ generic(iov_ip (&iov)[N], buffer_ref b)
     piov[1].iov_len  = iov[1].iov_len;
 
     checksum_field<Tag>(iov[1].base) = ~detail::i_ccs(piov);
+
+    return 2;
 }
 
 template <int N, bool allow_recuse>
