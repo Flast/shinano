@@ -121,8 +121,6 @@ enum class parameter_problem : std::uint8_t
 
 } // namespace iana::icmp
 
-using icmp_type [[gnu::deprecated("use iana::icmp::type")]] = icmp::type;
-
 
 // http://tools.ietf.org/html/rfc4443
 namespace icmp6 {
@@ -177,7 +175,6 @@ enum class parameter_problem : std::uint8_t
 
 } // namespace iana::icmp6
 
-using icmp6_type [[gnu::deprecated("use iana::icmp6::type")]] = icmp6::type;
 
 } // namespace iana
 

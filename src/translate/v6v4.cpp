@@ -102,44 +102,43 @@ icmp6(iov_ip (&iov)[N], buffer_ref b, Inner)
 
     // http://tools.ietf.org/html/rfc6145#section-5.2
     // http://tools.ietf.org/html/rfc6145#section-5.2
-    switch (static_cast<iana::icmp6_type>(icmp6.icmp6_type))
+    switch (static_cast<iana::icmp6::type>(icmp6.icmp6_type))
     {
       // ICMPv6 information message
 
-      case iana::icmp6_type::echo_request:
-        iov[1].icmp.type = static_cast<std::uint8_t>(iana::icmp_type::echo_request);
+      case iana::icmp6::type::echo_request:
+        iov[1].icmp.type = static_cast<std::uint8_t>(iana::icmp::type::echo_request);
         iov[2].base      = bip6.next_to<ipv6::icmp6_header>().data();
         iov[2].len       = plength(ip6) - iov[1].len;
         break;
 
-      case iana::icmp6_type::echo_reply:
-        iov[1].icmp.type = static_cast<std::uint8_t>(iana::icmp_type::echo_reply);
+      case iana::icmp6::type::echo_reply:
+        iov[1].icmp.type = static_cast<std::uint8_t>(iana::icmp::type::echo_reply);
         iov[2].base      = bip6.next_to<ipv6::icmp6_header>().data();
         iov[2].len       = plength(ip6) - iov[1].len;
         break;
 
       // ICMPv6 error message
 
-      case iana::icmp6_type::destination_unreachable:
-        using iana::icmp::destination_unreachable;
-        iov[1].icmp.type = static_cast<std::uint8_t>(iana::icmp_type::destination_unreachable);
+      case iana::icmp6::type::destination_unreachable:
+        iov[1].icmp.type = static_cast<std::uint8_t>(iana::icmp::type::destination_unreachable);
 
         switch (static_cast<iana::icmp6::destination_unreachable>(icmp6.icmp6_code))
         {
           case iana::icmp6::destination_unreachable::no_route_to_destination:
           case iana::icmp6::destination_unreachable::beyond_scope_of_source:
           case iana::icmp6::destination_unreachable::address:
-            iov[1].icmp.code = static_cast<std::uint8_t>(destination_unreachable::host);
+            iov[1].icmp.code = static_cast<std::uint8_t>(iana::icmp::destination_unreachable::host);
             count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, Inner{});
             break;
 
           case iana::icmp6::destination_unreachable::administratively_prohibited:
-            iov[1].icmp.code = static_cast<std::uint8_t>(destination_unreachable::host_is_a14y_prohibited);
+            iov[1].icmp.code = static_cast<std::uint8_t>(iana::icmp::destination_unreachable::host_is_a14y_prohibited);
             count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, Inner{});
             break;
 
           case iana::icmp6::destination_unreachable::port:
-            iov[1].icmp.code = static_cast<std::uint8_t>(destination_unreachable::port);
+            iov[1].icmp.code = static_cast<std::uint8_t>(iana::icmp::destination_unreachable::port);
             count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, Inner{});
             break;
 
@@ -148,20 +147,20 @@ icmp6(iov_ip (&iov)[N], buffer_ref b, Inner)
         }
         break;
 
-      case iana::icmp6_type::packet_too_big:
-        iov[1].icmp.type = static_cast<std::uint8_t>(iana::icmp_type::destination_unreachable);
+      case iana::icmp6::type::packet_too_big:
+        iov[1].icmp.type = static_cast<std::uint8_t>(iana::icmp::type::destination_unreachable);
         iov[1].icmp.code = static_cast<std::uint8_t>(iana::icmp::destination_unreachable::fragmentation_needed);
         count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, Inner{});
         break;
 
-      case iana::icmp6_type::time_exceeded:
-        iov[1].icmp.type = static_cast<std::uint8_t>(iana::icmp_type::time_exceeded);
+      case iana::icmp6::type::time_exceeded:
+        iov[1].icmp.type = static_cast<std::uint8_t>(iana::icmp::type::time_exceeded);
         iov[1].icmp.code = icmp6.icmp6_code;
         count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, Inner{});
         break;
 
-      case iana::icmp6_type::parameter_problem:
-        iov[1].icmp.type = static_cast<std::uint8_t>(iana::icmp_type::parameter_problem);
+      case iana::icmp6::type::parameter_problem:
+        iov[1].icmp.type = static_cast<std::uint8_t>(iana::icmp::type::parameter_problem);
 
         switch (static_cast<iana::icmp6::parameter_problem>(icmp6.icmp6_code))
         {
