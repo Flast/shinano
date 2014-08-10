@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([shinano], [0.1.0], [flast@tsukuba.wide.ad.jp])
+AC_INIT([shinano], [0.2], [flast@tsukuba.wide.ad.jp])
 
 AM_INIT_AUTOMAKE([foreign])
 
