@@ -36,23 +36,24 @@ struct iov_ip
     std::size_t (&iov_len)  = len;
 };
 
-using boost::mpl::bool_;
+using boost::mpl::true_;
+using boost::mpl::false_;
 
-template <int N, bool allow_recuse>
+template <int N, typename Inner>
 std::size_t
-core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, bool_<allow_recuse> ar);
+core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, Inner);
 
 
 template <int N>
 inline std::size_t
-dispatch_core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, bool_<true>)
+dispatch_core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, false_)
 {
-    return core(iov, b, src, dst, bool_<false>{});
+    return core(iov, b, src, dst, true_{});
 }
 
 template <int N>
 inline std::size_t
-dispatch_core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, bool_<false>)
+dispatch_core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, true_)
 {
     detail::throw_exception(translate_error("ICMPv6 error message containts ICMPv6 error message"));
 }
@@ -74,20 +75,20 @@ temporary_show_detail(const char *from, const char *to,
         << std::endl;
 }
 
-template <int N, bool allow_recuse>
+template <int N, typename Inner>
 std::size_t
-reassemble_icmp6_error_body(iov_ip (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
+reassemble_icmp6_error_body(iov_ip (&iov)[N], buffer_ref b, Inner)
 {
     auto be6 = b.next_to<ipv6::icmp6_header>();
     auto &ip6 = *be6.data_as<ipv6::header>();
     auto srcv4 = extract_embedded_address(source(ip6), temporary_prefix(), temporary_plen());
     auto dstv4 = lookup(dest(ip6));
-    return dispatch_core(iov, be6, srcv4, dstv4, ar);
+    return dispatch_core(iov, be6, srcv4, dstv4, Inner{});
 }
 
-template <int N, bool allow_recuse>
+template <int N, typename Inner>
 std::size_t
-icmp6(iov_ip (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
+icmp6(iov_ip (&iov)[N], buffer_ref b, Inner)
 {
     auto &ip6   = *b.data_as<ipv6::header>();
     auto bip6   = b.next_to<ipv6::header>();
@@ -129,17 +130,17 @@ icmp6(iov_ip (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
           case iana::icmp6::destination_unreachable::beyond_scope_of_source:
           case iana::icmp6::destination_unreachable::address:
             iov[1].icmp.code = static_cast<std::uint8_t>(destination_unreachable::host);
-            count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, ar);
+            count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, Inner{});
             break;
 
           case iana::icmp6::destination_unreachable::administratively_prohibited:
             iov[1].icmp.code = static_cast<std::uint8_t>(destination_unreachable::host_is_a14y_prohibited);
-            count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, ar);
+            count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, Inner{});
             break;
 
           case iana::icmp6::destination_unreachable::port:
             iov[1].icmp.code = static_cast<std::uint8_t>(destination_unreachable::port);
-            count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, ar);
+            count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, Inner{});
             break;
 
           default:
@@ -150,13 +151,13 @@ icmp6(iov_ip (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
       case iana::icmp6_type::packet_too_big:
         iov[1].icmp.type = static_cast<std::uint8_t>(iana::icmp_type::destination_unreachable);
         iov[1].icmp.code = static_cast<std::uint8_t>(iana::icmp::destination_unreachable::fragmentation_needed);
-        count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, ar);
+        count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, Inner{});
         break;
 
       case iana::icmp6_type::time_exceeded:
         iov[1].icmp.type = static_cast<std::uint8_t>(iana::icmp_type::time_exceeded);
         iov[1].icmp.code = icmp6.icmp6_code;
-        count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, ar);
+        count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, Inner{});
         break;
 
       case iana::icmp6_type::parameter_problem:
@@ -191,7 +192,7 @@ icmp6(iov_ip (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
 
           case iana::icmp6::parameter_problem::next_header:
             iov[1].icmp.code = static_cast<std::uint8_t>(iana::icmp::destination_unreachable::protocol);
-            count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, ar);
+            count = count - 1 + reassemble_icmp6_error_body(drop<2>(iov), bip6, Inner{});
             break;
 
           case iana::icmp6::parameter_problem::option:
@@ -241,9 +242,9 @@ generic(iov_ip (&iov)[N], buffer_ref b)
     return 2;
 }
 
-template <int N, bool allow_recuse>
+template <int N, typename Inner>
 std::size_t
-core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, bool_<allow_recuse> ar)
+core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, Inner)
 {
     auto &ip6 = *b.data_as<ipv6::header>();
 
@@ -269,7 +270,7 @@ core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, boo
       case iana::protocol_number::icmp6:
         // Adjust next-header field for ICMP
         iov[0].ip.ip_p = static_cast<std::uint8_t>(iana::protocol_number::icmp);
-        ret = icmp6(iov, b, ar);
+        ret = icmp6(iov, b, Inner{});
         temporary_show_detail("icmp6", "icmp", ip6, src, dst);
         break;
 
@@ -321,7 +322,7 @@ translate<ipv4>(std::reference_wrapper<raw> fwd, buffer_ref b) try
     auto srcv4 = lookup(source(ip6));
     auto dstv4 = extract_embedded_address(dest(ip6), temporary_prefix(), temporary_plen());
 
-    const auto iov_cnt = core(iov_ip, b, srcv4, dstv4, bool_<true>{});
+    const auto iov_cnt = core(iov_ip, b, srcv4, dstv4, false_{});
 
     iovec iov[count] = {};
     for (std::size_t i = 0; i < count; ++i)

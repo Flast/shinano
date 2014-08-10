@@ -39,23 +39,24 @@ struct iov_ip6
     std::size_t (&iov_len)  = len;
 };
 
-using boost::mpl::bool_;
+using boost::mpl::true_;
+using boost::mpl::false_;
 
-template <int N, bool allow_recuse>
+template <int N, typename Inner>
 std::size_t
-core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, bool_<allow_recuse> ar);
+core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, Inner);
 
 
 template <int N>
 inline std::size_t
-dispatch_core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, bool_<true>)
+dispatch_core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, false_)
 {
-    return core(iov, b, src, dst, bool_<false>{});
+    return core(iov, b, src, dst, true_{});
 }
 
 template <int N>
 inline std::size_t
-dispatch_core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, bool_<false>)
+dispatch_core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, true_)
 {
     detail::throw_exception(translate_error("ICMP error message containts ICMP error message"));
 }
@@ -109,20 +110,20 @@ finalize_ip6(iov_ip6 (&iov)[N]) noexcept
     checksum_field<Tag>(iov[1].base) = ~detail::i_ccs(piov);
 }
 
-template <int N, bool allow_recuse>
+template <int N, typename Inner>
 inline std::size_t
-reassemble_icmp_error_body(iov_ip6 (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
+reassemble_icmp_error_body(iov_ip6 (&iov)[N], buffer_ref b, Inner)
 {
     auto be = b.next_to<ipv4::icmp_header>();
     auto &ip = *be.data_as<ipv4::header>();
     auto srcv6 = lookup(source(ip));
     auto dstv6 = make_embedded_address(dest(ip), temporary_prefix(), temporary_plen());
-    return dispatch_core(iov, be, srcv6, dstv6, ar);
+    return dispatch_core(iov, be, srcv6, dstv6, Inner{});
 }
 
-template <int N, bool allow_recuse>
+template <int N, typename Inner>
 std::size_t
-icmp(iov_ip6 (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
+icmp(iov_ip6 (&iov)[N], buffer_ref b, Inner)
 {
     auto &ip   = *b.data_as<ipv4::header>();
     auto bip   = b.next_to<ipv4::header>();
@@ -165,30 +166,30 @@ icmp(iov_ip6 (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
           case iana::icmp::destination_unreachable::network_unreachable_for_tos:
           case iana::icmp::destination_unreachable::host_unreachable_for_tos:
             iov[1].icmp6.icmp6_code = static_cast<std::uint8_t>(destination_unreachable::no_route_to_destination);
-            count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, ar);
+            count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, Inner{});
             break;
 
           case iana::icmp::destination_unreachable::protocol:
             iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::parameter_problem);
             iov[1].icmp6.icmp6_code = static_cast<std::uint8_t>(iana::icmp6::parameter_problem::header_field);
-            count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, ar);
+            count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, Inner{});
             break;
 
           case iana::icmp::destination_unreachable::port:
             iov[1].icmp6.icmp6_code = static_cast<std::uint8_t>(destination_unreachable::port);
-            count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, ar);
+            count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, Inner{});
             break;
 
           case iana::icmp::destination_unreachable::dont_fragment:
             iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::packet_too_big);
             iov[1].icmp6.icmp6_code = 0;
-            count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, ar);
+            count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, Inner{});
             break;
 
           case iana::icmp::destination_unreachable::network_is_a14y_prohibited:
           case iana::icmp::destination_unreachable::host_is_a14y_prohibited:
             iov[1].icmp6.icmp6_code = static_cast<std::uint8_t>(destination_unreachable::administratively_prohibited);
-            count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, ar);
+            count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, Inner{});
             break;
 
           // NOTE: Quote from RFC6145
@@ -210,7 +211,7 @@ icmp(iov_ip6 (&iov)[N], buffer_ref b, bool_<allow_recuse> ar)
       case iana::icmp_type::time_exceeded:
         iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::time_exceeded);
         iov[1].icmp6.icmp6_code = icmp.code;
-        count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, ar);
+        count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, Inner{});
         break;
 
       case iana::icmp_type::parameter_problem:
@@ -319,9 +320,9 @@ generic(iov_ip6 (&iov)[N], buffer_ref b)
     return 2;
 }
 
-template <int N, bool allow_recuse>
+template <int N, typename Inner>
 std::size_t
-core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, bool_<allow_recuse> ar)
+core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, Inner)
 {
     auto &ip = *b.data_as<ipv4::header>();
 
@@ -343,7 +344,7 @@ core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, 
       case iana::protocol_number::icmp:
         // Adjust next-header field for ICMPv6
         iov[0].ip6.ip6_nxt = static_cast<std::uint8_t>(iana::protocol_number::icmp6);
-        ret = icmp(iov, b, ar);
+        ret = icmp(iov, b, Inner{});
         temporary_show_detail("icmp", "icmp6", ip, src, dst);
         break;
 
@@ -395,7 +396,7 @@ translate<ipv6>(std::reference_wrapper<raw> fwd, buffer_ref b) try
     auto srcv6 = make_embedded_address(source(ip), temporary_prefix(), temporary_plen());
     auto dstv6 = lookup(dest(ip));
 
-    const auto iov_cnt = core(iov_ip6, b, srcv6, dstv6, bool_<true>{});
+    const auto iov_cnt = core(iov_ip6, b, srcv6, dstv6, false_{});
 
     iovec iov[count] = {};
     for (std::size_t i = 0; i < count; ++i)
