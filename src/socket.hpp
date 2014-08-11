@@ -201,14 +201,19 @@ struct raw : detail::safe_desc
            , detail::mixin::controllable<raw>
            , detail::mixin::writeable<raw>
 {
-    static constexpr struct ipv4_tag {} ipv4 = {};
-    static constexpr struct ipv6_tag {} ipv6 = {};
+    static constexpr struct ipv4_tag   {} ipv4 =   {};
+    static constexpr struct ipv6_tag   {} ipv6 =   {};
+    static constexpr struct icmpv4_tag {} icmpv4 = {};
+    static constexpr struct icmpv6_tag {} icmpv6 = {};
 
-    explicit
-    raw(int family);
+    explicit raw(int family, int protocol);
+    explicit raw(int family);
 
     raw(ipv4_tag);
     raw(ipv6_tag);
+
+    raw(icmpv4_tag);
+    raw(icmpv6_tag);
 };
 
 template <typename Tag, typename... Args>

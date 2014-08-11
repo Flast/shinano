@@ -39,6 +39,7 @@ struct iov_ip
 using boost::mpl::true_;
 using boost::mpl::false_;
 
+
 template <int N, typename Inner>
 std::size_t
 core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, Inner);
@@ -74,6 +75,19 @@ temporary_show_detail(const char *from, const char *to,
         << to_string(src) << " -> " << to_string(dst)
         << std::endl;
 }
+
+
+namespace error {
+
+void
+sendback_time_exceeded(raw &error, buffer_ref b)
+{
+    // FIXME: Should return icmp6 time exceeded error message.
+    translate_break("time exceeded");
+}
+
+} // namespace shinano::<anonymous-namespace>::error
+
 
 template <int N, typename Inner>
 std::size_t
@@ -296,7 +310,7 @@ core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, Inn
 // v6 to v4
 template <>
 bool
-translate<ipv4>(std::reference_wrapper<raw> fwd, buffer_ref b) try
+translate<ipv4>(std::tuple<raw, raw> &fwd, buffer_ref b) try
 {
     auto &ip6 = *b.data_as<ipv6::header>();
 
@@ -304,8 +318,8 @@ translate<ipv4>(std::reference_wrapper<raw> fwd, buffer_ref b) try
 
     if (ip6.ip6_hlim-- <= 1)
     {
-        // FIXME: Should return icmp6 time exceeded error message.
-        translate_break("time exceeded");
+        error::sendback_time_exceeded(std::get<1>(fwd), b);
+        return true;
     }
 
     // We should treat 5 separated fields in icmp error message.
@@ -331,7 +345,7 @@ translate<ipv4>(std::reference_wrapper<raw> fwd, buffer_ref b) try
         iov[i].iov_len  = iov_ip[i].iov_len;
     }
 
-    fwd.get().sendmsg(iov, iov_cnt, designated((sockaddr_in)) by
+    std::get<0>(fwd).sendmsg(iov, iov_cnt, designated((sockaddr_in)) by
     (
       ((.sin_family = AF_INET))
       ((.sin_addr   = dstv4))

@@ -7,11 +7,11 @@
 #define shinano_translate_hpp_
 
 #include <cstdint>
-#include <functional>
 #include <stdexcept>
 
 #include <iterator>
 #include <array>
+#include <tuple>
 
 #include "config.hpp"
 #include "util.hpp"
@@ -87,7 +87,7 @@ struct translate_error : std::runtime_error
 
 template <typename Target>
 bool
-translate(std::reference_wrapper<raw>, buffer_ref);
+translate(std::tuple<raw, raw> &, buffer_ref);
 
 struct translate_breaked : std::exception
 {

@@ -59,8 +59,13 @@ tuntap::up(bool up)
 }
 
 
+raw::raw(int family, int protocol)
+  : safe_desc(::socket(family, SOCK_RAW, protocol))
+{
+}
+
 raw::raw(int family)
-  : safe_desc(::socket(family, SOCK_RAW, IPPROTO_RAW))
+  : raw(family, IPPROTO_RAW)
 {
 }
 
@@ -71,6 +76,16 @@ raw::raw(raw::ipv4_tag)
 
 raw::raw(raw::ipv6_tag)
   : raw(AF_INET6)
+{
+}
+
+raw::raw(raw::icmpv4_tag)
+  : raw(AF_INET, IPPROTO_ICMP)
+{
+}
+
+raw::raw(raw::icmpv6_tag)
+  : raw(AF_INET6, IPPROTO_ICMPV6)
 {
 }
 

@@ -14,8 +14,10 @@
 #include "translate.hpp"
 using namespace shinano;
 
+#include <tuple>
+
 void
-do_work(tuntap is, raw os4, raw os6)
+do_work(tuntap is, std::tuple<raw, raw> os4, std::tuple<raw, raw> os6)
 {
     input_buffer buffer;
 
@@ -55,10 +57,10 @@ int main(int argc, char **argv) try
     auto is = make_tuntap<tuntap::tun_tag>(argv[1]);
     is.up();
 
-    auto os4 = make_raw<raw::ipv4_tag>();
-    auto os6 = make_raw<raw::ipv6_tag>();
 
-    do_work(std::move(is), std::move(os4), std::move(os6));
+    do_work(std::move(is),
+        std::make_tuple(make_raw<raw::ipv4_tag>(), make_raw<raw::icmpv6_tag>()),
+        std::make_tuple(make_raw<raw::ipv6_tag>(), make_raw<raw::icmpv4_tag>()));
 }
 catch (boost::exception &e)
 {
