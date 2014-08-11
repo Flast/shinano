@@ -13,7 +13,7 @@
 #include <boost/mpl/bool.hpp>
 
 #include "translate.hpp"
-#include "translate/address_table.hpp"
+#include "translate/bib.hpp"
 #include "translate/checksum.hpp"
 #include <boost/range/numeric.hpp>
 #include <boost/range/adaptor/dropped.hpp>

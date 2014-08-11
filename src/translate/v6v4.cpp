@@ -12,7 +12,7 @@
 #include "detail/exception.hpp"
 
 #include "translate.hpp"
-#include "translate/address_table.hpp"
+#include "translate/bib.hpp"
 #include "translate/checksum.hpp"
 
 #include <boost/chrono/system_clocks.hpp>
