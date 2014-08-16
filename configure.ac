@@ -4,7 +4,7 @@
 AC_PREREQ([2.69])
 AC_INIT([shinano], [0.2], [flast@tsukuba.wide.ad.jp])
 
-AM_INIT_AUTOMAKE([foreign])
+AM_INIT_AUTOMAKE([foreign subdir-objects])
 
 AC_CONFIG_SRCDIR([src/shinano.cpp])
 AC_CONFIG_HEADERS([config.h])
