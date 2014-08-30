@@ -9,7 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <chrono>
-#include <boost/predef/other/endian.h>
+//#include <boost/predef/other/endian.h>
 
 #include <netinet/in.h>
 #include <netinet/ip.h>
