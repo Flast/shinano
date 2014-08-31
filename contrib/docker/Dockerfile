@@ -2,19 +2,20 @@ from fedora:20
 user root
 workdir /root
 
-run yum -y install gcc-c++ git \
+run yum -y upgrade ;\
+    yum -y install gcc-c++ git \
            make libtool automake autoconf-archive ;\
     yum clean all
 
-run git clone https://github.com/boostorg/boost.git -b develop --recursive ;\
+run git clone https://github.com/boostorg/boost.git -b develop --recursive --depth 1 ;\
     ( cd boost ;\
       git remote add flast https://github.com/Flast/boost.git ;\
-      git fetch flast ;\
+      git fetch flast --depth 1 ;\
       git checkout flast/develop ;\
       git submodule update --init ;\
       ( cd libs/range ;\
         git remote add flast https://github.com/Flast/range.git ;\
-        git fetch flast ;\
+        git fetch flast --depth 1 ;\
         git checkout flast/oven ) ;\
       ./bootstrap.sh ;\
       ./b2 headers ;\
@@ -22,16 +23,15 @@ run git clone https://github.com/boostorg/boost.git -b develop --recursive ;\
     rm -rf boost
 
 add shinano.tar.gz /root/
-workdir /root/shinano
-run libtoolize ;\
-    aclocal ;\
-    autoheader ;\
-    automake -a ;\
-    autoconf ;\
-    ./configure ;\
-    make install ;\
-    make distclean
-workdir /root
+run ( cd /root/shinano ;\
+      libtoolize ;\
+      aclocal ;\
+      autoheader ;\
+      automake -a ;\
+      autoconf ;\
+      ./configure ;\
+      make install ) ;\
+    rm -rf /root/shinano
 
 cmd sysctl net.ipv6.conf.all.forwarding=1 ;\
     sysctl net.ipv6.conf.all.proxy_ndp=1 ;\
@@ -41,4 +41,4 @@ cmd sysctl net.ipv6.conf.all.forwarding=1 ;\
     ip link set nat64 up ;\
     ip route add 100.64.0.0/10 dev nat64 ;\
     ip -6 route add 64:ff9b::/96 dev nat64 ;\
-    shinano nat64
+    shinano nat64 >> /var/log/shinano.log
