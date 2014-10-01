@@ -15,6 +15,9 @@
 #include "translate/address_table.hpp"
 #include "translate/checksum.hpp"
 
+#include <boost/chrono/system_clocks.hpp>
+#include <boost/chrono/io/time_point_io.hpp>
+
 namespace shinano {
 
 namespace {
@@ -64,9 +67,10 @@ temporary_show_detail(const char *from, const char *to,
 {
     const auto payload_length = net_to_host(iphdr.ip6_plen);
 
+    const auto now = boost::chrono::system_clock::now();
     std::cout
-      << "[" << from << "] "
-        << to_string(source(iphdr)) << " -> " << to_string(dest(iphdr))
+      << now << ": [" << from << "] " << std::endl
+      << "  " << to_string(source(iphdr)) << " -> " << to_string(dest(iphdr))
         << std::endl
       << "    Hop limit " << int(iphdr.ip6_hlim) << " / " << payload_length << " bytes"
         << std::endl

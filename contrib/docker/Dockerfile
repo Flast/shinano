@@ -9,17 +9,13 @@ run yum -y upgrade ;\
 
 run git clone https://github.com/boostorg/boost.git -b develop --recursive --depth 1 ;\
     ( cd boost ;\
-      git remote add flast https://github.com/Flast/boost.git ;\
-      git fetch flast --depth 1 ;\
-      git checkout flast/develop ;\
-      git submodule update --init ;\
       ( cd libs/range ;\
         git remote add flast https://github.com/Flast/range.git ;\
         git fetch flast --depth 1 ;\
         git checkout flast/oven ) ;\
       ./bootstrap.sh ;\
       ./b2 headers ;\
-      ./b2 install --without-all ) ;\
+      ./b2 install --with-system --with-chrono ) ;\
     rm -rf boost
 
 add shinano.tar.gz /root/

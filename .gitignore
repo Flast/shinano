@@ -14,6 +14,7 @@
 Makefile.in
 /config.guess
 /config.sub
+/compile
 /depcomp
 /install-sh
 /missing

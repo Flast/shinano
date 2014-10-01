@@ -18,6 +18,9 @@
 #include <boost/range/numeric.hpp>
 #include <boost/range/adaptor/dropped.hpp>
 
+#include <boost/chrono/system_clocks.hpp>
+#include <boost/chrono/io/time_point_io.hpp>
+
 namespace shinano {
 
 namespace {
@@ -67,9 +70,10 @@ temporary_show_detail(const char *from, const char *to,
 {
     const auto payload_length = net_to_host(iphdr.ip_len) - length(iphdr);
 
+    const auto now = boost::chrono::system_clock::now();
     std::cout
-      << "[" << from << "] "
-        << to_string(source(iphdr)) << " -> " << to_string(dest(iphdr))
+      << now << ": [" << from << "] " << std::endl
+      << "  " << to_string(source(iphdr)) << " -> " << to_string(dest(iphdr))
         << std::endl
       << "    TTL " << int(iphdr.ip_ttl) << " / " << payload_length << " bytes"
         << std::endl
