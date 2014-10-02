@@ -15,8 +15,11 @@ AC_LANG([C++])
 # Checks for programs.
 AC_PROG_CXX
 AX_CXX_COMPILE_STDCXX_11
+AX_CHECK_COMPILE_FLAG([-Wall],   [CXXFLAGS="$CXXFLAGS -Wall"])
+AX_CHECK_COMPILE_FLAG([-Wextra], [CXXFLAGS="$CXXFLAGS -Wextra"])
 
 AM_PROG_LIBTOOL
+AX_CHECK_LINK_FLAG([-rdynamic], [LDFLAGS="$LDFLAGS -rdynamic"])
 
 # Checks for libraries.
 

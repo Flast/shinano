@@ -17,7 +17,33 @@
 #include <memory>
 #include "detail/memory.hpp"
 
+#include <boost/core/demangle.hpp>
+#include <boost/xpressive/xpressive.hpp>
+
 namespace shinano { namespace detail {
+
+namespace {
+
+using namespace boost::xpressive;
+
+inline std::string
+demangle_each_trace_line(const char *line)
+{
+    static const auto pattern = cregex::compile("^(.*\\()(.*)(\\+0x[[:xdigit:]]+\\).*)$");
+    cmatch what;
+    if (regex_match(line, what, pattern))
+    {
+        std::string mangled = what[2];
+        std::ostringstream ostr;
+        ostr << what[1]
+             << boost::core::demangle(mangled.c_str())
+             << what[3];
+        return ostr.str();
+    }
+    return line;
+}
+
+} // <anonymous-namespace>
 
 std::string
 to_string(const throw_backtrace &bt)
@@ -31,7 +57,7 @@ to_string(const throw_backtrace &bt)
     auto i = symbol.get();
     std::for_each(i, std::next(i, raw.size()), [&](const char *line)
     {
-        ostr << line << std::endl;
+        ostr << demangle_each_trace_line(line) << std::endl;
     });
 
     return ostr.str();
