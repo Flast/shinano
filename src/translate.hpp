@@ -110,7 +110,7 @@ private:
 };
 
 template <typename... T>
-inline void
+[[noreturn]] inline void
 translate_break(T &&... v)
 {
     throw translate_breaked(std::forward<T>(v)...);
