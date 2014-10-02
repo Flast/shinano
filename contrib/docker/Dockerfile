@@ -15,8 +15,12 @@ run git clone https://github.com/boostorg/boost.git -b develop --recursive --dep
         git checkout flast/oven ) ;\
       ./bootstrap.sh ;\
       ./b2 headers ;\
-      ./b2 install --with-system --with-chrono ) ;\
+      ./b2 install --prefix=/usr --with-system --with-chrono ) ;\
     rm -rf boost
+
+run echo '/usr/lib64' >> /etc/ld.so.conf.d/glibc.conf ;\
+    echo '/usr/lib'   >> /etc/ld.so.conf.d/glibc.conf ;\
+    ldconfig
 
 add shinano.tar.gz /root/
 run ( cd /root/shinano ;\
