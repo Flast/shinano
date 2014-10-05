@@ -12,6 +12,7 @@
 #include "detail/exception.hpp"
 
 #include "translate.hpp"
+#include "translate/core.hpp"
 #include "translate/address_table.hpp"
 #include "translate/checksum.hpp"
 
@@ -19,23 +20,7 @@ namespace shinano {
 
 namespace {
 
-struct iov_ip
-{
-    union
-    {
-        int _;
-        ipv4::header      ip;
-        ipv4::icmp_header icmp;
-        tag::tcp::header   tcp;
-        tag::udp::header   udp;
-    };
-    void *      base = &ip;
-    std::size_t len  = 0;
-
-    void *      (&iov_base) = base;
-    std::size_t (&iov_len)  = len;
-};
-
+using detail::iov_ip;
 using boost::mpl::true_;
 using boost::mpl::false_;
 
@@ -56,7 +41,8 @@ template <int N>
 inline std::size_t
 dispatch_core(iov_ip (&iov)[N], buffer_ref b, const in_addr &src, const in_addr &dst, true_)
 {
-    detail::throw_exception(translate_error("ICMPv6 error message containts ICMPv6 error message"));
+    detail::throw_exception(
+        translate_error("ICMPv6 error message containts ICMPv6 error message"));
 }
 
 void
@@ -82,8 +68,41 @@ namespace error {
 void
 sendback_time_exceeded(raw &error, buffer_ref b)
 {
-    // FIXME: Should return icmp6 time exceeded error message.
-    translate_break("time exceeded");
+    if (payload_protocol(*b.data_as<ipv6::header>()) == iana::protocol_number::icmp6)
+    {
+        const auto icmp = b.next_to<ipv6::header>().data_as<ipv6::icmp6_header>();
+        if (iana::icmp6::is_error(static_cast<iana::icmp6::type>(icmp->icmp6_type)))
+        {
+            detail::throw_exception(
+                translate_error("Time exceeded with ICMPv6 error message"));
+        }
+    }
+
+    auto icmp6 = designated((ipv6::icmp6_header)) by
+    (
+      ((.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::time_exceeded)))
+      ((.icmp6_code = 0))
+    );
+
+    const iovec iov[] = {
+      designated((iovec)) by
+      (
+        ((.iov_base = &icmp6))
+        ((.iov_len  = sizeof(icmp6)))
+      ),
+      designated((iovec)) by
+      (
+        ((.iov_base = b.data()))
+        ((.iov_len  = b.size()))
+      )
+    };
+
+    const auto dst = source(*b.data_as<ipv6::header>());
+    detail::sendmsg(error, iov, designated((sockaddr_in6)) by
+    (
+      ((.sin6_family = ipv6::domain))
+      ((.sin6_addr   = dst))
+    ));
 }
 
 } // namespace shinano::<anonymous-namespace>::error
@@ -322,6 +341,9 @@ translate<ipv4>(std::tuple<raw, raw> &fwd, buffer_ref b) try
         return true;
     }
 
+    auto srcv4 = lookup(source(ip6));
+    auto dstv4 = extract_embedded_address(dest(ip6), temporary_prefix(), temporary_plen());
+
     // We should treat 5 separated fields in icmp error message.
     //
     //             | icmp error message ...
@@ -331,23 +353,12 @@ translate<ipv4>(std::tuple<raw, raw> &fwd, buffer_ref b) try
     // ip6 | icmp6 | ip6 | icmp6 | payload ...
     constexpr int count = 5;
 
-    iov_ip iov_ip[count] = {};
+    iov_ip iov[count] = {};
+    const auto iovc = core(iov, b, srcv4, dstv4, false_{});
 
-    auto srcv4 = lookup(source(ip6));
-    auto dstv4 = extract_embedded_address(dest(ip6), temporary_prefix(), temporary_plen());
-
-    const auto iov_cnt = core(iov_ip, b, srcv4, dstv4, false_{});
-
-    iovec iov[count] = {};
-    for (std::size_t i = 0; i < count; ++i)
-    {
-        iov[i].iov_base = iov_ip[i].iov_base;
-        iov[i].iov_len  = iov_ip[i].iov_len;
-    }
-
-    std::get<0>(fwd).sendmsg(iov, iov_cnt, designated((sockaddr_in)) by
+    detail::sendmsg(std::get<0>(fwd), iov, iovc, designated((sockaddr_in)) by
     (
-      ((.sin_family = AF_INET))
+      ((.sin_family = ipv4::domain))
       ((.sin_addr   = dstv4))
     ));
 

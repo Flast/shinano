@@ -13,6 +13,7 @@
 #include <boost/mpl/bool.hpp>
 
 #include "translate.hpp"
+#include "translate/core.hpp"
 #include "translate/address_table.hpp"
 #include "translate/checksum.hpp"
 #include <boost/range/numeric.hpp>
@@ -22,23 +23,7 @@ namespace shinano {
 
 namespace {
 
-struct iov_ip6
-{
-    union
-    {
-        int _;
-        ipv6::header       ip6;
-        ipv6::icmp6_header icmp6;
-        tag::tcp::header   tcp;
-        tag::udp::header   udp;
-    };
-    void *      base = &ip6;
-    std::size_t len  = 0;
-
-    void *      (&iov_base) = base;
-    std::size_t (&iov_len)  = len;
-};
-
+using detail::iov_ip6;
 using boost::mpl::true_;
 using boost::mpl::false_;
 
@@ -59,7 +44,8 @@ template <int N>
 inline std::size_t
 dispatch_core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, true_)
 {
-    detail::throw_exception(translate_error("ICMP error message containts ICMP error message"));
+    detail::throw_exception(
+        translate_error("ICMP error message containts ICMP error message"));
 }
 
 void
@@ -396,6 +382,9 @@ translate<ipv6>(std::tuple<raw, raw> &fwd, buffer_ref b) try
         return true;
     }
 
+    auto srcv6 = make_embedded_address(source(ip), temporary_prefix(), temporary_plen());
+    auto dstv6 = lookup(dest(ip));
+
     // We should treat 5 separated fields in icmp error message.
     //
     //             | icmp6 error message ...
@@ -405,23 +394,12 @@ translate<ipv6>(std::tuple<raw, raw> &fwd, buffer_ref b) try
     // ip  | icmp  | ip  | icmp  | payload ...
     constexpr int count = 5;
 
-    iov_ip6 iov_ip6[count] = {};
+    iov_ip6 iov[count] = {};
+    const auto iovc = core(iov, b, srcv6, dstv6, false_{});
 
-    auto srcv6 = make_embedded_address(source(ip), temporary_prefix(), temporary_plen());
-    auto dstv6 = lookup(dest(ip));
-
-    const auto iov_cnt = core(iov_ip6, b, srcv6, dstv6, false_{});
-
-    iovec iov[count] = {};
-    for (std::size_t i = 0; i < count; ++i)
-    {
-        iov[i].iov_base = iov_ip6[i].iov_base;
-        iov[i].iov_len  = iov_ip6[i].iov_len;
-    }
-
-    std::get<0>(fwd).sendmsg(iov, iov_cnt, designated((sockaddr_in6)) by
+    detail::sendmsg(std::get<0>(fwd), iov, iovc, designated((sockaddr_in6)) by
     (
-      ((.sin6_family = AF_INET6))
+      ((.sin6_family = ipv6::domain))
       ((.sin6_addr   = dstv6))
     ));
 

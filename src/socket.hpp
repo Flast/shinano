@@ -93,10 +93,10 @@ struct writeable
     {
         const auto m = designated((msghdr)) by
         (
-          ((.msg_name = const_cast<A *>(&addr)))
+          ((.msg_name    = const_cast<A *>(&addr)))
           ((.msg_namelen = sizeof(A)))
-          ((.msg_iov = const_cast<iovec *>(iov)))
-          ((.msg_iovlen = iovcnt))
+          ((.msg_iov     = const_cast<iovec *>(iov)))
+          ((.msg_iovlen  = iovcnt))
         );
         auto err = ::sendmsg(static_cast<Desc *>(this)->native(), &m, flags);
         if (err < 0) { throw_with_errno(); }

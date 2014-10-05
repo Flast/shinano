@@ -76,6 +76,15 @@ enum class type : std::uint8_t
     domain_name_reply = 38,         // XX
 };
 
+inline constexpr bool
+is_error(type t) noexcept
+{
+    return (t == type::destination_unreachable)
+        || (t == type::time_exceeded)
+        || (t == type::parameter_problem)
+        || (t == type::datagram_conversion_error);
+}
+
 // ++ http://tools.ietf.org/html/rfc1700
 enum class destination_unreachable : std::uint8_t
 {
@@ -150,6 +159,12 @@ enum class type : std::uint8_t
 
     reserved_for_informational = 255,
 };
+
+inline constexpr bool
+is_error(type t) noexcept
+{
+    return 127 < static_cast<std::uint8_t>(t);
+}
 
 enum class destination_unreachable : std::uint8_t
 {
