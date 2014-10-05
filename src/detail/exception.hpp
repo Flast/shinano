@@ -28,7 +28,7 @@ bool
 backtrace(throw_backtrace::value_type &) noexcept;
 
 template <typename E>
-inline void
+[[noreturn]] inline void
 throw_exception(E &&ex)
 {
     auto ei = boost::enable_error_info(ex);
@@ -44,7 +44,7 @@ throw_exception(E &&ex)
 
 } // namespace shinano::detail
 
-void
+[[noreturn]] void
 throw_with_errno();
 
 } // namespace shinano

@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef shinano_translate_address_table_hpp_
-#define shinano_translate_address_table_hpp_
+#ifndef shinano_translate_bib_hpp_
+#define shinano_translate_bib_hpp_
 
 #include <netinet/in.h>
 

@@ -19,6 +19,7 @@ using namespace boost::icl;
 #include "detail/designated_initializer.hpp"
 
 #include "translate.hpp"
+#include "translate/bib.hpp"
 
 #include <iostream>
 
@@ -29,14 +30,14 @@ namespace {
 using clock      = std::chrono::steady_clock;
 using time_point = clock::time_point;
 
-struct nat_entry
+struct binding_information
 {
     in_addr    v4add;
     in6_addr   v6add;
     time_point updated_at;
 };
 
-std::deque<nat_entry> table;
+std::deque<binding_information> bib;
 
 // Store v4 address in host order.
 interval_set<decltype(in_addr::s_addr)> free_list;
@@ -48,18 +49,18 @@ void
 reclaim()
 {
     const auto now = clock::now();
-    auto i = boost::remove_if(table, [&](const nat_entry &e)
+    auto i = boost::remove_if(bib, [&](const binding_information &e)
     {
         return (now - e.updated_at) > config::table_expires_after;
     });
 
-    std::cout << "reclaim " << std::distance(i, table.end()) << " table entries." << std::endl;;
+    std::cout << "reclaim " << std::distance(i, bib.end()) << " bib entries." << std::endl;;
 
-    table.erase(i, table.end());
+    bib.erase(i, bib.end());
 }
 
 
-decltype(table)::iterator
+decltype(bib)::iterator
 allocate_v4address()
 {
     auto i = free_list.begin();
@@ -77,13 +78,13 @@ allocate_v4address()
         ++v;
     }
     // XXX: Should validate v4 here.
-    table.emplace_back(designated((nat_entry)) by
+    bib.emplace_back(designated((binding_information)) by
     (
       ((.v4add.s_addr = host_to_net(v)))
     ));
     free_list -= v;
 
-    return std::prev(table.end());
+    return std::prev(bib.end());
 }
 
 } // namespace shinano::<anonymous-namespace>
@@ -91,12 +92,12 @@ allocate_v4address()
 const in_addr &
 lookup(const in6_addr &address)
 {
-    auto i = boost::find_if(table, [&](const nat_entry &e)
+    auto i = boost::find_if(bib, [&](const binding_information &e)
     {
         return IN6_ARE_ADDR_EQUAL(&address, &e.v6add);
     });
 
-    if (i == table.end())
+    if (i == bib.end())
     {
         reclaim();
         i = allocate_v4address();
@@ -110,12 +111,12 @@ lookup(const in6_addr &address)
 const in6_addr &
 lookup(const in_addr &address)
 {
-    auto i = boost::find_if(table, [&](const nat_entry &e)
+    auto i = boost::find_if(bib, [&](const binding_information &e)
     {
         return address.s_addr == e.v4add.s_addr;
     });
 
-    if (i == table.end())
+    if (i == bib.end())
     {
         auto ex = translate_error("translate v4 to v6 failed: no such NAT entry");
         detail::throw_exception(ex);

@@ -14,10 +14,13 @@
 
 #include "translate.hpp"
 #include "translate/core.hpp"
-#include "translate/address_table.hpp"
+#include "translate/bib.hpp"
 #include "translate/checksum.hpp"
 #include <boost/range/numeric.hpp>
 #include <boost/range/adaptor/dropped.hpp>
+
+#include <boost/chrono/system_clocks.hpp>
+#include <boost/chrono/io/time_point_io.hpp>
 
 namespace shinano {
 
@@ -54,9 +57,10 @@ temporary_show_detail(const char *from, const char *to,
 {
     const auto payload_length = net_to_host(iphdr.ip_len) - length(iphdr);
 
+    const auto now = boost::chrono::system_clock::now();
     std::cout
-      << "[" << from << "] "
-        << to_string(source(iphdr)) << " -> " << to_string(dest(iphdr))
+      << now << ": [" << from << "] " << std::endl
+      << "  " << to_string(source(iphdr)) << " -> " << to_string(dest(iphdr))
         << std::endl
       << "    TTL " << int(iphdr.ip_ttl) << " / " << payload_length << " bytes"
         << std::endl
@@ -137,23 +141,22 @@ icmp(iov_ip6 (&iov)[N], buffer_ref b, Inner)
 
     // http://tools.ietf.org/html/rfc6145#section-4.2
     // http://tools.ietf.org/html/rfc6145#section-4.3
-    switch (static_cast<iana::icmp_type>(icmp.type))
+    switch (static_cast<iana::icmp::type>(icmp.type))
     {
-      case iana::icmp_type::echo_request:
-        iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::echo_request);
+      case iana::icmp::type::echo_request:
+        iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6::type::echo_request);
         iov[2].base             = bip.next_to<ipv4::icmp_header>().data();
         iov[2].len              = plength(ip) - iov[1].len;
         break;
 
-      case iana::icmp_type::echo_reply:
-        iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::echo_reply);
+      case iana::icmp::type::echo_reply:
+        iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6::type::echo_reply);
         iov[2].base             = bip.next_to<ipv4::icmp_header>().data();
         iov[2].len              = plength(ip) - iov[1].len;
         break;
 
-      case iana::icmp_type::destination_unreachable:
-        using iana::icmp6::destination_unreachable;
-        iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::destination_unreachable);
+      case iana::icmp::type::destination_unreachable:
+        iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6::type::destination_unreachable);
 
         switch (static_cast<iana::icmp::destination_unreachable>(icmp.code))
         {
@@ -165,30 +168,30 @@ icmp(iov_ip6 (&iov)[N], buffer_ref b, Inner)
           case iana::icmp::destination_unreachable::source_host_isolated:
           case iana::icmp::destination_unreachable::network_unreachable_for_tos:
           case iana::icmp::destination_unreachable::host_unreachable_for_tos:
-            iov[1].icmp6.icmp6_code = static_cast<std::uint8_t>(destination_unreachable::no_route_to_destination);
+            iov[1].icmp6.icmp6_code = static_cast<std::uint8_t>(iana::icmp6::destination_unreachable::no_route_to_destination);
             count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, Inner{});
             break;
 
           case iana::icmp::destination_unreachable::protocol:
-            iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::parameter_problem);
+            iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6::type::parameter_problem);
             iov[1].icmp6.icmp6_code = static_cast<std::uint8_t>(iana::icmp6::parameter_problem::header_field);
             count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, Inner{});
             break;
 
           case iana::icmp::destination_unreachable::port:
-            iov[1].icmp6.icmp6_code = static_cast<std::uint8_t>(destination_unreachable::port);
+            iov[1].icmp6.icmp6_code = static_cast<std::uint8_t>(iana::icmp6::destination_unreachable::port);
             count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, Inner{});
             break;
 
           case iana::icmp::destination_unreachable::dont_fragment:
-            iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::packet_too_big);
+            iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6::type::packet_too_big);
             iov[1].icmp6.icmp6_code = 0;
             count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, Inner{});
             break;
 
           case iana::icmp::destination_unreachable::network_is_a14y_prohibited:
           case iana::icmp::destination_unreachable::host_is_a14y_prohibited:
-            iov[1].icmp6.icmp6_code = static_cast<std::uint8_t>(destination_unreachable::administratively_prohibited);
+            iov[1].icmp6.icmp6_code = static_cast<std::uint8_t>(iana::icmp6::destination_unreachable::administratively_prohibited);
             count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, Inner{});
             break;
 
@@ -208,14 +211,14 @@ icmp(iov_ip6 (&iov)[N], buffer_ref b, Inner)
         };
         break;
 
-      case iana::icmp_type::time_exceeded:
-        iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::time_exceeded);
+      case iana::icmp::type::time_exceeded:
+        iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6::type::time_exceeded);
         iov[1].icmp6.icmp6_code = icmp.code;
         count = count - 1 + reassemble_icmp_error_body(drop<2>(iov), bip, Inner{});
         break;
 
-      case iana::icmp_type::parameter_problem:
-        iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6_type::parameter_problem);
+      case iana::icmp::type::parameter_problem:
+        iov[1].icmp6.icmp6_type = static_cast<std::uint8_t>(iana::icmp6::type::parameter_problem);
 
         switch (static_cast<iana::icmp::parameter_problem>(icmp.code))
         {
@@ -262,37 +265,37 @@ icmp(iov_ip6 (&iov)[N], buffer_ref b, Inner)
         }
         break;
 
-      case iana::icmp_type::timestamp_request:
-      case iana::icmp_type::timestamp_reply:
+      case iana::icmp::type::timestamp_request:
+      case iana::icmp::type::timestamp_reply:
         translate_break("silently dropped: timestamp message is obsoleted in icmp6");
 
-      case iana::icmp_type::information_request:
-      case iana::icmp_type::information_reply:
+      case iana::icmp::type::information_request:
+      case iana::icmp::type::information_reply:
         translate_break("silently dropped: information message is obsoleted in icmp6");
 
-      case iana::icmp_type::redirect:
+      case iana::icmp::type::redirect:
         translate_break("silently dropped: redirect is single hop message");
-      case iana::icmp_type::source_quench:
+      case iana::icmp::type::source_quench:
         translate_break("silently dropped: source quench is obsoleted in icmp6");
 
-      case iana::icmp_type::router_advertisement:
-      case iana::icmp_type::router_solicitation:
+      case iana::icmp::type::router_advertisement:
+      case iana::icmp::type::router_solicitation:
         translate_break("silently dropped: RA and RS are single hop message");
 
-      case iana::icmp_type::address_mask_request:
-      case iana::icmp_type::address_mask_reply:
+      case iana::icmp::type::address_mask_request:
+      case iana::icmp::type::address_mask_reply:
         translate_break("silently dropped: address mask message is obsoleted in icmp6");
 
-      case iana::icmp_type::traceroute:
+      case iana::icmp::type::traceroute:
         translate_break("silently dropped: traceroute message is unspecified in RFC6145");
-      case iana::icmp_type::datagram_conversion_error:
+      case iana::icmp::type::datagram_conversion_error:
         translate_break("silently dropped: datagram conversion error is unspecified in RFC6145");
 
-      case iana::icmp_type::domain_name_request:
-      case iana::icmp_type::domain_name_reply:
+      case iana::icmp::type::domain_name_request:
+      case iana::icmp::type::domain_name_reply:
         translate_break("silently dropped: domain name message is unspecified in RFC6145");
 
-      case iana::icmp_type::alternate_host_address:
+      case iana::icmp::type::alternate_host_address:
         translate_break("silently dropped: alternate host address");
 
       // others; silently drop

@@ -9,6 +9,9 @@
 
 #include "detail/dump.hpp"
 
+#include <boost/chrono/io/timezone.hpp>
+#include <boost/chrono/io/time_point_io.hpp>
+
 #include "config.hpp"
 #include "socket.hpp"
 #include "translate.hpp"
@@ -50,8 +53,18 @@ do_work(tuntap is, std::tuple<raw, raw> os4, std::tuple<raw, raw> os6)
     }
 }
 
+void
+initialize_logging()
+{
+    using boost::chrono::time_fmt;
+    using boost::chrono::timezone;
+    std::cout << time_fmt(timezone::local);
+    std::cerr << time_fmt(timezone::local);
+}
+
 int main(int argc, char **argv) try
 {
+    initialize_logging();
     temporary_table_init();
 
     auto is = make_tuntap<tuntap::tun_tag>(argv[1]);

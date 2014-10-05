@@ -4,19 +4,22 @@
 AC_PREREQ([2.69])
 AC_INIT([shinano], [0.2], [flast@tsukuba.wide.ad.jp])
 
-AM_INIT_AUTOMAKE([foreign])
+AM_INIT_AUTOMAKE([foreign subdir-objects])
 
 AC_CONFIG_SRCDIR([src/shinano.cpp])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
+AC_LANG([C++])
+
 # Checks for programs.
 AC_PROG_CXX
-AC_LANG_PUSH([C++])
-    AX_CXX_COMPILE_STDCXX_11
-AC_LANG_POP
+AX_CXX_COMPILE_STDCXX_11
+AX_CHECK_COMPILE_FLAG([-Wall],   [CXXFLAGS="$CXXFLAGS -Wall"])
+AX_CHECK_COMPILE_FLAG([-Wextra], [CXXFLAGS="$CXXFLAGS -Wextra"])
 
 AM_PROG_LIBTOOL
+AX_CHECK_LINK_FLAG([-rdynamic], [LDFLAGS="$LDFLAGS -rdynamic"])
 
 # Checks for libraries.
 
@@ -28,6 +31,12 @@ AC_CHECK_HEADER([boost/version.hpp])
 # Checks for typedefs, structures, and compiler characteristics.
 
 # Checks for library functions.
+#AX_CXX_CHECK_LIB([boost_system], [boost::system::generic_category()]
+#                ,
+#                , [AC_MSG_ERROR(Boost.System required)])
+#AX_CXX_CHECK_LIB([boost_chrono], [boost::chrono::system_clock::now()]
+#                ,
+#                , [AC_MSG_ERROR(Boost.Chrono required)])
 
 AC_CONFIG_FILES([Makefile
                  src/Makefile])
