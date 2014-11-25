@@ -63,7 +63,7 @@
     sudo ip tuntap add dev <tun-if-name> mode tun
     sudo ip link set <tun-if-name> up
     sudo ip -4 route add 100.64.0.0/10 dev <tun-if-name>
-    sudo ip -6 route add 64:ff9b::/64 dev <tun-if-name>
+    sudo ip -6 route add 64:ff9b::/96 dev <tun-if-name>
     sudo ./src/shinano <tun-if-name>
     ```
 
