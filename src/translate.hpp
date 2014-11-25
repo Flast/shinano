@@ -89,10 +89,10 @@ template <typename Target>
 bool
 translate(std::reference_wrapper<raw>, buffer_ref);
 
-struct translate_breaked : std::exception
+struct translate_aborted : std::exception
 {
     explicit
-    translate_breaked(std::string what, bool ret = true)
+    translate_aborted(std::string what, bool ret = true)
       : _w(what), _ret(ret) { }
 
     virtual const char *
@@ -113,7 +113,7 @@ template <typename... T>
 [[noreturn]] inline void
 translate_break(T &&... v)
 {
-    throw translate_breaked(std::forward<T>(v)...);
+    throw translate_aborted(std::forward<T>(v)...);
 }
 
 

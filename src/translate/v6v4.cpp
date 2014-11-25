@@ -342,7 +342,7 @@ translate<ipv4>(std::reference_wrapper<raw> fwd, buffer_ref b) try
 
     return true;
 }
-catch (translate_breaked &e)
+catch (translate_aborted &e)
 {
     std::cerr << "info: " << e.what() << std::endl;
     return e.ret();
