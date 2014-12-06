@@ -59,7 +59,8 @@ dispatch_core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_ad
 
 template <int N>
 inline std::size_t
-dispatch_core(iov_ip6 (&iov)[N], buffer_ref b, const in6_addr &src, const in6_addr &dst, true_)
+dispatch_core(iov_ip6 (&iov [[gnu::unused]])[N], buffer_ref b [[gnu::unused]],
+              const in6_addr &src [[gnu::unused]], const in6_addr &dst [[gnu::unused]], true_)
 {
     detail::throw_exception(translate_error("ICMP error message containts ICMP error message"));
 }

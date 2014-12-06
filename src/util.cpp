@@ -57,7 +57,8 @@ to_string(const in6_addr &addr)
 //          translator should ignore such field even if not zero.
 
 in_addr
-extract_embedded_address(const in6_addr &embed, const in6_addr &prefix, std::size_t plen)
+extract_embedded_address(const in6_addr &embed,
+                         const in6_addr &prefix [[gnu::unused]], std::size_t plen)
 {
     in_addr x;
 
