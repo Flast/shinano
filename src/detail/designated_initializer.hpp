@@ -8,6 +8,7 @@
 
 #include <utility>
 #include <boost/utility/identity_type.hpp>
+#include <boost/utility/value_init.hpp>
 #include <boost/preprocessor/seq/for_each.hpp>
 
 // const auto value = designated((type)) by
@@ -29,6 +30,6 @@
                           _internal_di_value_, \
                           initializers_) \
     return std::move(_internal_di_value_); \
-}({})
+}(boost::initialized_value)
 
 #endif
