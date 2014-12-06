@@ -24,12 +24,7 @@ do_work(tuntap is, raw os4, raw os6)
 
     while (true)
     {
-        auto bref = [&]() -> buffer_ref
-        {
-            const auto len = is.read(buffer);
-            if (len < 0) { throw_with_errno(); }
-            return make_buffer_ref(buffer, len);
-        }();
+        auto bref = make_buffer_ref(buffer, is.read(buffer));
 
         switch (*bref.data_as<ieee::protocol_number>(2))
         {
