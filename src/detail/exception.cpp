@@ -77,10 +77,10 @@ backtrace(throw_backtrace::value_type &bt) noexcept
 } // namespace shinano::detail
 
 void
-throw_with_errno()
+__shinano_define_thrower(throw_with_errno, ())
 {
     auto ex = std::system_error(errno, std::system_category());
-    detail::throw_exception(ex);
+    __shinano_throw_exception(ex);
 }
 
 } // namespace shinano
