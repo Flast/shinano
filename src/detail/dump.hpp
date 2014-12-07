@@ -32,7 +32,6 @@ dump_line(std::basic_ostream<CharT, T...> &ostr, I itr, const I end)
 template <typename CharT, typename... T, typename R>
 inline auto
 dump_line(std::basic_ostream<CharT, T...> &ostr, const R &range)
-  -> decltype(dump_line(ostr, std::begin(range), std::end(range)))
 {
     return dump_line(ostr, std::begin(range), std::end(range));
 }

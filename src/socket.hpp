@@ -82,7 +82,6 @@ struct writeable
     template <typename B>
     auto
     write(const B &buf)
-      -> decltype(this->write(buf.data(), buf.size()))
     {
         return write(buf.data(), buf.size());
     }
@@ -106,7 +105,6 @@ struct writeable
     template <int N, typename A>
     auto
     sendmsg(const iovec (&iov)[N], const A &addr, int flags = 0)
-      -> decltype(this->sendmsg(iov, N, addr, flags))
     {
         return sendmsg(iov, N, addr, flags);
     }
@@ -126,7 +124,6 @@ struct readable
     template <typename B>
     auto
     read(B &buf)
-      -> decltype(this->read(buf.data(), buf.size()))
     {
         return read(buf.data(), buf.size());
     }
