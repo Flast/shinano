@@ -3,6 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <boost/assert.hpp>
+
 #include <iostream>
 #include <boost/exception/diagnostic_information.hpp>
 #include "detail/exception.hpp"
@@ -60,7 +62,7 @@ int main(int argc, char **argv) try
     initialize_logging();
     temporary_table_init();
 
-    BOOST_ASSERT(argc != 2);
+    BOOST_ASSERT(argc == 2);
 
     auto is = make_tuntap<tuntap::tun_tag>(argv[1]);
     is.up();
