@@ -15,7 +15,7 @@
 #include <boost/exception/enable_error_info.hpp>
 
 #include <boost/predef.h>
-#if BOOST_COMP_GNUC
+#if BOOST_VERSION_NUMBER(4,9,0) <= BOOST_COMP_GNUC
 #define SHINANO_HAS_THROWER_CONTEXT 1
 #include <boost/preprocessor/punctuation/comma_if.hpp>
 #include <boost/preprocessor/facilities/is_empty.hpp>
