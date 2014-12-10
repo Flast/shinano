@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef sln64_detail_exception_hpp_
-#define sln64_detail_exception_hpp_
+#ifndef shinano_detail_exception_hpp_
+#define shinano_detail_exception_hpp_
 
 #include <string>
 #include <vector>
