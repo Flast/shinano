@@ -93,11 +93,19 @@ __shinano_decl_thrower(throw_exception, (E &&ex))
 {
     auto ei = boost::enable_error_info(ex);
 
-    throw_backtrace::value_type bt(config::max_backtrace_count);
-    if (detail::backtrace(bt))
+    try
     {
-        ei << detail::throw_backtrace(std::move(bt));
+        throw_backtrace::value_type bt; // I bellieve default ctor of std::vector won't
+                                        // throw anything even if since C++17.
+        bt.reserve(config::max_backtrace_count);
+        if (detail::backtrace(bt))
+        {
+            ei << detail::throw_backtrace(std::move(bt));
+        }
     }
+    // Do nothing
+    catch (std::bad_alloc &) { } // from allocator
+    catch (std::length_error &) { } // from reserve
 
     __shinano_throw_informed_exception(ei);
 }
