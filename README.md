@@ -6,7 +6,7 @@
 
 ### Pre-requirements
 
-- C++11 readly compiler
+- C++11 ready compiler
   + [GCC](http://gcc.gnu.org/) 4.8 or later
   + [Clang](http://clang.llvm.org/) 3.1 or later
 - [Boost C++ libraries](http://www.boost.org/)
