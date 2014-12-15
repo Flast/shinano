@@ -6,7 +6,7 @@
 
 ### Pre-requirements
 
-- C++14 return type deduction readly compiler
+- C++14 return type deduction ready compiler
   + [GCC](http://gcc.gnu.org/) 4.8 or later
   + [Clang](http://clang.llvm.org/) 3.4 or later
 - [Boost C++ libraries](http://www.boost.org/)
