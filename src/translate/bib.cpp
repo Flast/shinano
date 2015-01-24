@@ -1,4 +1,4 @@
-//          Copyright Kohei Takahashi 2014
+//          Copyright Kohei Takahashi 2014 - 2015
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
@@ -7,8 +7,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <string>
+#include <boost/xpressive/xpressive_static.hpp>
 #include <boost/icl/interval_set.hpp>
-using namespace boost::icl;
 
 #include <iterator>
 #include <deque>
@@ -25,10 +26,14 @@ using namespace boost::icl;
 
 namespace shinano {
 
+namespace bib {
+
 namespace {
 
-using clock      = std::chrono::steady_clock;
-using time_point = clock::time_point;
+using clock              = std::chrono::steady_clock;
+using time_point         = clock::time_point;
+using mapping_type       = boost::icl::interval_set<decltype(in_addr::s_addr)>;
+using mapping_range_type = mapping_type::interval_type;
 
 struct binding_information
 {
@@ -40,7 +45,8 @@ struct binding_information
 std::deque<binding_information> bib;
 
 // Store v4 address in host order.
-interval_set<decltype(in_addr::s_addr)> free_list;
+mapping_type config_list;
+mapping_type free_list;
 
 in6_addr prefix;
 std::size_t prefix_len;
@@ -63,6 +69,8 @@ reclaim()
 decltype(bib)::iterator
 allocate_v4address()
 {
+    using namespace boost::icl;
+
     auto i = free_list.begin();
     if (i == free_list.end())
     {
@@ -87,42 +95,81 @@ allocate_v4address()
     return std::prev(bib.end());
 }
 
-} // namespace shinano::<anonymous-namespace>
+} // namespace shinano::bib::<anonymous-namespace>
+
+void
+append_v4prefix(std::string sprefix)
+{
+    using namespace boost::xpressive;
+
+    const sregex re = (s1 = (repeat<3>(+_d >> '.') >> +_d)) >> '/' >> (s2 = +_d);
+
+    smatch res;
+    if (!regex_match(sprefix, res, re))
+    {
+        shinano::detail::throw_exception(std::runtime_error("tmp")); // XXX
+    }
+
+    in_addr prefix;
+    if (inet_aton(res.str(1).c_str(), &prefix) < 0)
+    {
+        throw_with_errno();
+    }
+
+    constexpr auto v4_length_in_bit = 32; // IPv4 address has 32bit length.
+    const uint32_t mask = (0x1u << (v4_length_in_bit - std::stoi(res.str(2)))) - 1;
+
+    auto range = mapping_range_type::open(
+        net_to_host(prefix.s_addr) & ~mask,
+        net_to_host(prefix.s_addr) |  mask);
+
+    // Throw if it collides with new range which already configured.
+    if (config_list.find(range) != config_list.end())
+    {
+        shinano::detail::throw_exception(std::runtime_error("tmp")); // XXX
+    }
+    config_list += range;
+    free_list += range;
+
+    std::cout << "A ipv4 mapped prefix has been configured: " << sprefix << std::endl;
+}
+
+} // namespace shinano::bib
 
 const in_addr &
 lookup(const in6_addr &address)
 {
-    auto i = boost::find_if(bib, [&](const binding_information &e)
+    auto i = boost::find_if(bib::bib, [&](const bib::binding_information &e)
     {
         return IN6_ARE_ADDR_EQUAL(&address, &e.v6add);
     });
 
-    if (i == bib.end())
+    if (i == bib::bib.end())
     {
-        reclaim();
-        i = allocate_v4address();
+        bib::reclaim();
+        i = bib::allocate_v4address();
         i->v6add = address;
     }
 
-    i->updated_at = clock::now();
+    i->updated_at = bib::clock::now();
     return i->v4add;
 }
 
 const in6_addr &
 lookup(const in_addr &address)
 {
-    auto i = boost::find_if(bib, [&](const binding_information &e)
+    auto i = boost::find_if(bib::bib, [&](const bib::binding_information &e)
     {
         return address.s_addr == e.v4add.s_addr;
     });
 
-    if (i == bib.end())
+    if (i == bib::bib.end())
     {
         auto ex = translate_error("translate v4 to v6 failed: no such NAT entry");
         detail::throw_exception(ex);
     }
 
-    i->updated_at = clock::now();
+    i->updated_at = bib::clock::now();
     return i->v6add;
 }
 
@@ -133,20 +180,8 @@ namespace temporary {
 void
 table_init()
 {
-    using interval = decltype(free_list)::interval_type;
-
-    in_addr begin, end;
-    if (inet_aton("100.64.0.0", &begin) < 0
-     || inet_aton("100.127.255.255", &end) < 0)
-    {
-        throw_with_errno();
-    }
-
-    auto isa = interval::open(net_to_host(begin.s_addr), net_to_host(end.s_addr));
-    free_list += isa;
-
-    prefix_len = 96;
-    if (inet_pton(AF_INET6, "64:ff9b::", &prefix) != 1)
+    bib::prefix_len = 96;
+    if (inet_pton(AF_INET6, "64:ff9b::", &bib::prefix) != 1)
     {
         throw_with_errno();
     }
@@ -155,13 +190,13 @@ table_init()
 const in6_addr &
 prefix() noexcept
 {
-    return prefix;
+    return bib::prefix;
 }
 
 std::size_t
 plen() noexcept
 {
-    return prefix_len;
+    return bib::prefix_len;
 }
 
 } // namespace shinano::temporary

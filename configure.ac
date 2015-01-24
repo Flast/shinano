@@ -39,6 +39,9 @@ AC_CHECK_HEADER([boost/version.hpp])
 #AX_CXX_CHECK_LIB([boost_chrono], [boost::chrono::system_clock::now()]
 #                ,
 #                , [AC_MSG_ERROR(Boost.Chrono required)])
+#AX_CXX_CHECK_LIB([boost_program_options], [boost::program_options::detail::cmdline::run()]
+#                ,
+#                , [AC_MSG_ERROR(Boost.Program_options required)])
 
 AC_CONFIG_FILES([Makefile
                  src/Makefile])
