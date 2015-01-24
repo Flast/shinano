@@ -60,7 +60,7 @@ initialize_logging()
 int main(int argc, char **argv) try
 {
     initialize_logging();
-    temporary_table_init();
+    temporary::table_init();
 
     BOOST_ASSERT(argc == 2);
 

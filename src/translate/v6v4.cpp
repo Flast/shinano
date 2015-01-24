@@ -86,7 +86,7 @@ reassemble_icmp6_error_body(iov_ip (&iov)[N], buffer_ref b, Inner)
 {
     auto be6 = b.next_to<ipv6::icmp6_header>();
     auto &ip6 = *be6.data_as<ipv6::header>();
-    auto srcv4 = extract_embedded_address(source(ip6), temporary_prefix(), temporary_plen());
+    auto srcv4 = extract_embedded_address(source(ip6), temporary::prefix(), temporary::plen());
     auto dstv4 = lookup(dest(ip6));
     return dispatch_core(iov, be6, srcv4, dstv4, Inner{});
 }
@@ -324,7 +324,7 @@ translate<ipv4>(std::reference_wrapper<raw> fwd, buffer_ref b) try
     iov_ip iov_ip[count] = {};
 
     auto srcv4 = lookup(source(ip6));
-    auto dstv4 = extract_embedded_address(dest(ip6), temporary_prefix(), temporary_plen());
+    auto dstv4 = extract_embedded_address(dest(ip6), temporary::prefix(), temporary::plen());
 
     const auto iov_cnt = core(iov_ip, b, srcv4, dstv4, false_{});
 

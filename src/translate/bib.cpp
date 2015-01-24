@@ -127,8 +127,11 @@ lookup(const in_addr &address)
 }
 
 
+// forward decls are in translate.hpp
+namespace temporary {
+
 void
-temporary_table_init()
+table_init()
 {
     using interval = decltype(free_list)::interval_type;
 
@@ -150,15 +153,17 @@ temporary_table_init()
 }
 
 const in6_addr &
-temporary_prefix() noexcept
+prefix() noexcept
 {
     return prefix;
 }
 
 std::size_t
-temporary_plen() noexcept
+plen() noexcept
 {
     return prefix_len;
 }
+
+} // namespace shinano::temporary
 
 } // namespace shinano

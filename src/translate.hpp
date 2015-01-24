@@ -117,12 +117,16 @@ translate_break(T &&... v)
 }
 
 
+namespace temporary {
+
 void
-temporary_table_init();
+table_init();
 const in6_addr &
-temporary_prefix() noexcept;
+prefix() noexcept;
 std::size_t
-temporary_plen() noexcept;
+plen() noexcept;
+
+} // namespace shinano::temporary
 
 } // namespace shinano
 
