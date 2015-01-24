@@ -10,7 +10,11 @@
   + [GCC](http://gcc.gnu.org/) 4.8 or later
   + [Clang](http://clang.llvm.org/) 3.4 or later
 - [Boost C++ libraries](http://www.boost.org/)
-- OvenToBoost (a.k.a. Range Extensions)
+  + Following non-header-only libraries are also required.
+    * [Boost.System](http://www.boost.org/libs/system)
+    * [Boost.Chrono](http://www.boost.org/libs/chrono)
+    * [Boost.Program\_options](http://www.boost.org/libs/program_options)
+- [OvenToBoost](http://github.com/Flast/range/tree/oven) (a.k.a. Range Extensions)
 - Autotools
   + [Autoconf Archive](http://www.gnu.org/software/autoconf-archive/)
 
@@ -33,7 +37,7 @@
 
     ```
     cd boost
-    ./bootstrap/sh --with-libraries=chrono,system
+    ./bootstrap/sh --with-libraries=chrono,system,program_options
     ./b2 headers
     ./b2
     ./b2 install --prefix=/path/to # if desired
@@ -62,9 +66,9 @@
     sudo firewall-cmd --zone external --change-interface <eth-if-name> # to NAPT44 be enabled
     sudo ip tuntap add dev <tun-if-name> mode tun
     sudo ip link set <tun-if-name> up
-    sudo ip -4 route add 100.64.0.0/10 dev <tun-if-name>
+    sudo ip -4 route add <ipv4-mapped-prefix> dev <tun-if-name>
     sudo ip -6 route add 64:ff9b::/96 dev <tun-if-name>
-    sudo ./src/shinano <tun-if-name>
+    sudo ./src/shinano -I <tun-if-name> -4 <ipv4-mapped-prefix>
     ```
 
 ### References
@@ -92,9 +96,14 @@
   [6146]: http://tools.ietf.org/html/rfc6146
   [6791]: http://tools.ietf.org/html/rfc6791
 
+### Capabilities
+
+At least, *Shinano* requires following capabilities(7) to run.
+- CAP\_NET\_RAW
+
 ### License
 
-              Copyright Kohei Takahashi 2014
+              Copyright Kohei Takahashi 2014 - 2015
      Distributed under the Boost Software License, Version 1.0.
         (See accompanying file LICENSE_1_0.txt or copy at
               http://www.boost.org/LICENSE_1_0.txt)
