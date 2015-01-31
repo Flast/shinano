@@ -97,7 +97,7 @@ __shinano_decl_thrower(throw_exception, (E &&ex))
     {
         throw_backtrace::value_type bt; // I bellieve default ctor of std::vector won't
                                         // throw anything even if since C++17.
-        bt.reserve(config::max_backtrace_count);
+        bt.resize(config::max_backtrace_count);
         if (detail::backtrace(bt))
         {
             ei << detail::throw_backtrace(std::move(bt));
